@@ -87,6 +87,27 @@ def gen_dir_mat():
     return arr
 
 
+def gen_navigation_matrix():
+    """Generate a mapping from (node, direction) to next node."""
+    pairs = set()
+    for i, j in itertools.product(G.nodes, G.nodes):
+        if i == j:
+            continue
+        target = nx.shortest_path(G, i, j)[1]
+        pairs.add(
+            "{{"
+            + f"{i}, {G.edges[i, target]['dir'] * (-1 if i > target else 1)}"
+            + "}"
+            + f", {target}"
+            + "},"
+        )
+    return (
+        "arx::map<arx::pair<int, int>, int> navigation_map = {\n"
+        + "\n".join(pairs)
+        + "\n};"
+    )
+
+
 def draw_graph():
     import matplotlib.pyplot as plt
 
@@ -100,3 +121,4 @@ def draw_graph():
 
 if __name__ == "__main__":
     print(arr_of_arr_to_cpp(gen_dir_mat()))
+    print(gen_navigation_matrix())
