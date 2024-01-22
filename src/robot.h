@@ -1,10 +1,13 @@
 #include <ArxContainer.h>
+#include <Adafruit_MotorShield.h>
+#include "./motors.h"
 class Robot
 {
 public:
-    arx::vector<pin_size_t> motors;
+    int maxSpeed = 255;
+    Motors::MotorPair motors;
     arx::vector<pin_size_t> line_sensors;
-    Robot(arx::vector<pin_size_t> motors, arx::vector<pin_size_t> line_sensors);
+    Robot(Motors::MotorPair motors, arx::vector<pin_size_t> line_sensors);
     Robot &readSensors();
     Robot &assignAngleError();
     Robot &drive();

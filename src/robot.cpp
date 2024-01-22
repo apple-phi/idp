@@ -1,12 +1,15 @@
 #include "./robot.h"
 #include "./sensor.h"
+#include "./constants.h"
+#include "./motors.h"
 
-Robot::Robot(arx::vector<pin_size_t> motors_, arx::vector<pin_size_t> line_sensors_) : motors(motors_), line_sensors(line_sensors_)
+// cppcheck-suppress passedByValue
+Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : motors(motors_), line_sensors(line_sensors_)
 {
-    for (auto &m : motors)
-    {
-        pinMode(m, OUTPUT);
-    }
+    motors
+        .setSpeed(maxSpeed)
+        .run(FORWARD)
+        .stop();
     for (auto &s : line_sensors)
     {
         pinMode(s, INPUT);
@@ -20,6 +23,8 @@ Robot &Robot::readSensors()
     // ordered from left to right.
     auto readings = Sensors::digitalReadAll(line_sensors);
     encodedLineSensorReading = Sensors::encodeLineSensorReadings(readings);
+    Serial.print("Line sensor readings: ");
+    Helper::printVector(readings);
     return *this;
 }
 
@@ -29,7 +34,7 @@ Robot &Robot::assignAngleError()
     // This is the angle that the robot will read to correct its steering.
     // Positive is too far right, negative is too far left.
     // Currently these are arbitrary values.
-    // TODO: Calibrate these values and/or the PD controller
+    // TODO: Calibrate these values
 
     // The encoded line sensor reading is a 4-bit number,
     // where each bit represents a sensor,
@@ -121,11 +126,41 @@ Robot &Robot::drive()
     return *this;
 }
 
+/*
+Implement a single step of the controller.
+https://controlguru.com/pid-with-controller-output-co-filter/
+*/
 Robot &Robot::steeringCorrection()
 {
-    // TODO: Implement PD controller based on angleError
-    // Would be helpful to do some maths
-    // Based on the robot and line dimensions
+    // TODO: tune constants
+    const float Kc = 0.02;
+    const float Ti = 0.5;
+    const float Td = 0.125;
+    const float alpha = 0.2; // Note: T_f = alpha * T_d
+    const float e = angleError;
+
+    static float prevError = 0;
+    static double errorIntegral = 0;
+    static float prevCo = 0;
+
+    const float pidCo = Kc * e + (Kc / Ti) * errorIntegral + Kc * Td * ((e - prevError) / DT);
+    const float filteredCo = prevCo + DT / (alpha * Td) * (pidCo - prevCo);
+    prevError = e;
+    prevCo = pidCo;
+    errorIntegral += e * DT;
+
+    // Now apply the correction to the motors
+    // +ve error means too far right, so turn left
+    // and $ error \approx K_{c}\times e $ so
+    const float rightSpeedMinusLeftSpeed = Helper::clamp<float>(filteredCo * maxSpeed, -maxSpeed, +maxSpeed); // TODO: tune this
+    if (rightSpeedMinusLeftSpeed > 0)
+    {
+        motors.setSpeedsAndRun(maxSpeed - rightSpeedMinusLeftSpeed, maxSpeed);
+    }
+    else
+    {
+        motors.setSpeedsAndRun(maxSpeed, maxSpeed + rightSpeedMinusLeftSpeed);
+    }
     return *this;
 }
 
@@ -134,5 +169,6 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     // TODO: decide which way to turn,
     // based on the direction_matrix (see `direction_matrix.cpp`)
     // Make sure to check that `encodedLineSensorReadings` gives the right code for the expected junction!
+    motors.stop();
     return *this;
 }
