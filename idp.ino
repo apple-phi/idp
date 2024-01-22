@@ -3,6 +3,7 @@
 #include <ArxContainer.h>
 #include "./src/robot.h"
 #include "./src/motors.h"
+#include "./src/constants.h"
 
 Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -33,5 +34,5 @@ void loop()
     robot->readSensors();
     robot->assignAngleError();
     robot->drive();
-    delay(10);
+    delay(1000 * DT);
 }
