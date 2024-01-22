@@ -134,7 +134,7 @@ Robot &Robot::steeringCorrection()
 {
     // TODO: tune constants
     const float Kc = 0.02;
-    const float Ti = 0.5;
+    const float Ti = 0.05;
     const float Td = 0.125;
     const float alpha = 0.2; // Note: T_f = alpha * T_d
     const float e = angleError;
@@ -144,9 +144,9 @@ Robot &Robot::steeringCorrection()
     static float prevCo = 0;
 
     const float pidCo = Kc * e + (Kc / Ti) * errorIntegral + Kc * Td * ((e - prevError) / DT);
-    const float filteredCo = prevCo + DT / (alpha * Td) * (pidCo - prevCo);
+    const float filteredCo = pidCo; // prevCo + DT / (alpha * Td) * (pidCo - prevCo);
     prevError = e;
-    prevCo = pidCo;
+    prevCo = filteredCo;
     errorIntegral += e * DT;
 
     // Now apply the correction to the motors
