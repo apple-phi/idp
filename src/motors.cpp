@@ -13,8 +13,8 @@ namespace Motors
     {
         left->setSpeed(abs(leftSpeed));
         right->setSpeed(abs(rightSpeed));
-        left->run(leftSpeed >= 0 ? FORWARD : BACKWARD);
-        right->run(rightSpeed >= 0 ? FORWARD : BACKWARD);
+        left->run(leftSpeed >= 0 ? BACKWARD : FORWARD);
+        right->run(rightSpeed >= 0 ? BACKWARD : FORWARD);
         Serial.print("Motor speeds [L, R]: ");
         Serial.print(leftSpeed);
         Serial.print(", ");

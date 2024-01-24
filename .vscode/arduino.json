@@ -2,5 +2,7 @@
     "sketch": "idp.ino",
     "output": "build",
     "configuration": "mode=on",
-    "board": "arduino:megaavr:uno2018"
+    "board": "arduino:megaavr:uno2018",
+    "port": "COM4",
+    "programmer": "medbg"
 }

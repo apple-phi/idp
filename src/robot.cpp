@@ -2,13 +2,14 @@
 #include "./sensor.h"
 #include "./constants.h"
 #include "./motors.h"
+#include "./direction_matrix.h"
 
 // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : motors(motors_), line_sensors(line_sensors_)
 {
     motors
         .setSpeed(maxSpeed)
-        .run(FORWARD)
+        .run(BACKWARD)
         .stop();
     for (auto &s : line_sensors)
     {
@@ -41,22 +42,22 @@ Robot &Robot::assignAngleError()
     // ordered from left to right.
     switch (encodedLineSensorReading)
     {
-    // Alas, we're lost!
     case 0b0000:
     case 0b1001:
-        drivingMode = TURN;
+        drivingMode = FOLLOW;
+        angleError = 0;
         break;
 
     // Very far left of line
     case 0b0001:
-        drivingMode = FOLLOW;
-        angleError = -60;
+        drivingMode = TURN; // FOLLOW;
+        angleError = 0;     //-30;
         break;
 
     // Very far right of line
     case 0b1000:
-        drivingMode = FOLLOW;
-        angleError = 60;
+        drivingMode = TURN; // FOLLOW;
+        angleError = 0;     // 30;
         break;
 
     // Slightly too far left of line
@@ -78,8 +79,8 @@ Robot &Robot::assignAngleError()
     // But if we keep going,
     // we'll be fine!
     case 0b0101:
-        drivingMode = FOLLOW;
-        angleError = -30;
+        drivingMode = TURN; // FOLLOW;
+        angleError = 0;     //-20;
         break;
 
     // Just before a junction,
@@ -89,8 +90,8 @@ Robot &Robot::assignAngleError()
     // But if we keep going,
     // we'll be fine!
     case 0b1010:
-        drivingMode = FOLLOW;
-        angleError = +30;
+        drivingMode = TURN; // FOLLOW;
+        angleError = 0;     //+20;
         break;
 
     // Junction reached
@@ -102,6 +103,7 @@ Robot &Robot::assignAngleError()
     case 0b0111:
     case 0b1110:
     case 0b1111:
+        angleError = 0;
         drivingMode = TURN;
         break;
 
@@ -129,22 +131,25 @@ Robot &Robot::drive()
 /*
 Implement a single step of the controller.
 https://controlguru.com/pid-with-controller-output-co-filter/
+TODO: tune constants
+TODO: add more filters? https://controlguru.com/using-signal-filters-in-our-pid-loop/
+TODO: add feed forward control into the open loop
 */
 Robot &Robot::steeringCorrection()
 {
     // TODO: tune constants
-    const float Kc = 0.02;
-    const float Ti = 0.05;
-    const float Td = 0.125;
-    const float alpha = 0.2; // Note: T_f = alpha * T_d
+    const float Kc = 0.01;
+    const float Ti = 0.005;
+    const float Td = 0.003;
+    const float alpha = 0.1; // Note: T_f = alpha * T_d
     const float e = angleError;
 
     static float prevError = 0;
     static double errorIntegral = 0;
     static float prevCo = 0;
 
-    const float pidCo = Kc * e + (Kc / Ti) * errorIntegral + Kc * Td * ((e - prevError) / DT);
-    const float filteredCo = pidCo; // prevCo + DT / (alpha * Td) * (pidCo - prevCo);
+    const float pidCo = Kc * e + Kc * Td * ((e - prevError) / DT); //+ (Kc / Ti) * errorIntegral
+    const float filteredCo = pidCo;                                // prevCo + DT / (alpha * Td) * (pidCo - prevCo);
     prevError = e;
     prevCo = filteredCo;
     errorIntegral += e * DT;
@@ -153,13 +158,17 @@ Robot &Robot::steeringCorrection()
     // +ve error means too far right, so turn left
     // and $ error \approx K_{c}\times e $ so
     const float rightSpeedMinusLeftSpeed = Helper::clamp<float>(filteredCo * maxSpeed, -maxSpeed, +maxSpeed); // TODO: tune this
-    if (rightSpeedMinusLeftSpeed > 0)
+    if (rightSpeedMinusLeftSpeed < -1E-6)
     {
         motors.setSpeedsAndRun(maxSpeed - rightSpeedMinusLeftSpeed, maxSpeed);
     }
+    else if (rightSpeedMinusLeftSpeed > 1E-6)
+    {
+        motors.setSpeedsAndRun(maxSpeed, maxSpeed - rightSpeedMinusLeftSpeed);
+    }
     else
     {
-        motors.setSpeedsAndRun(maxSpeed, maxSpeed + rightSpeedMinusLeftSpeed);
+        motors.setSpeedsAndRun(maxSpeed, maxSpeed);
     }
     return *this;
 }
