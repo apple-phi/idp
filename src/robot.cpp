@@ -63,13 +63,13 @@ Robot &Robot::assignAngleError()
     // Slightly too far left of line
     case 0b0010:
         drivingMode = FOLLOW;
-        angleError = -15;
+        angleError = 15;
         break;
 
     // Slightly too far right of line
     case 0b0100:
         drivingMode = FOLLOW;
-        angleError = 15;
+        angleError = -15;
         break;
 
     // Just before a junction,
@@ -160,7 +160,7 @@ Robot &Robot::steeringCorrection()
     const float rightSpeedMinusLeftSpeed = Helper::clamp<float>(filteredCo * maxSpeed, -maxSpeed, +maxSpeed); // TODO: tune this
     if (rightSpeedMinusLeftSpeed < -1E-6)
     {
-        motors.setSpeedsAndRun(maxSpeed - rightSpeedMinusLeftSpeed, maxSpeed);
+        motors.setSpeedsAndRun(maxSpeed + rightSpeedMinusLeftSpeed, maxSpeed);
     }
     else if (rightSpeedMinusLeftSpeed > 1E-6)
     {

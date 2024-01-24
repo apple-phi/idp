@@ -5,7 +5,7 @@
 class Robot
 {
 public:
-    int maxSpeed = 100;
+    int maxSpeed = 255;
     Motors::MotorPair motors;
     arx::vector<pin_size_t> line_sensors;
     Robot(Motors::MotorPair motors, arx::vector<pin_size_t> line_sensors);
