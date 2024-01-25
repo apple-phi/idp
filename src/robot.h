@@ -5,6 +5,9 @@
 class Robot
 {
 public:
+    int8_t currentDirection = 1;
+    int8_t latestNode = 1;
+    int8_t targetNode = 10;
     int maxSpeed = 200;
     Motors::MotorPair motors;
     arx::vector<pin_size_t> line_sensors;
