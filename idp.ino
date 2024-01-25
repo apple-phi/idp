@@ -26,7 +26,7 @@ void setup()
     }
     Serial.println("Motor Shield found.");
 
-    robot = new Robot({left, right}, {2, 3, 4, 5});
+    robot = new Robot({left, right}, {13, 12, 11, 10});
 }
 
 void loop()

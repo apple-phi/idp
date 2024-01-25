@@ -43,9 +43,13 @@ Robot &Robot::assignAngleError()
     switch (encodedLineSensorReading)
     {
     case 0b0000:
+        drivingMode = FOLLOW;
+        angleError = 0;
+        break;
     
     // G: Weird sensor, just keep doing what it's doing
     case 0b1001:
+        break;
 
     // Very far left of line
     case 0b0001:
@@ -107,6 +111,7 @@ Robot &Robot::assignAngleError()
 
     // G: Weird sensor, just keep doing what it's doing
     case 0b1011:
+        break;
 
     // G: Junction reached
     case 0b1100:
@@ -116,6 +121,7 @@ Robot &Robot::assignAngleError()
 
     // G: Weird sensor, just keep doing what it's doing
     case 0b1101:
+        break;
 
     // G: Junction reached
     case 0b0111:
@@ -210,9 +216,11 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     // G: Update position and navigation, decide next direction
 
     // G: move forward a bit, probably be better to move until the sensors have left the junction
-    motors.setSpeedsAndRun(255, 255);
-    delay(500);
+
     motors.stop();
+    delay(100);
+    motors.setSpeedsAndRun(200, 200);
+    delay(100);
     
     // N = 1,
     // E = 2,
@@ -221,31 +229,34 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     
     // G: replace these variables with the actual direciton we want to go in
     int initial = 1; // This needs to be the current direction
-    int final = -2; // This needs to be the direction we want to go in
-    int sensor = 0x0000; // This needs to be the sensor reading
+    int final = 2; // This needs to be the direction we want to go in
 
     // G: Left turn.
     // G: Only time robot will turn 180 degrees is after picking up a block, no need to code it here.
     if ((initial == 1 && final == 2) || (initial == 2 && final == -1) || (initial == -1 && final == -2) || (initial == -2 && final == 1))
     {
-        motors.setSpeedsAndRun(-50, 50);
-        while (sensor != 0x0100){
+        motors.setSpeedsAndRun(200, 0);
+        delay(500);
+        while (encodedLineSensorReading != 0b0100){
+            this->readSensors(); // need update sensor
             // need update sensor
             delay(10);
         }
     }
     else // G: Right turn
     {
-        motors.setSpeedsAndRun(50, -50);
-        while (sensor != 0x0010){
+        motors.setSpeedsAndRun(0, 200);
+        delay(500);
+        while (encodedLineSensorReading != 0b0010){
+            this->readSensors(); // need update sensor
             // need update sensor
             delay(10);
         }
     }
 
     // G: We need to leave the junction to avoid this code being run again
-    motors.setSpeedsAndRun(255, 255);
-    delay(500);
-    motors.stop();
+    // motors.setSpeedsAndRun(255, 255);
+    // delay(500);
+    // motors.stop();
     return *this;
 }
