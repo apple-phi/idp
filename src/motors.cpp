@@ -15,10 +15,10 @@ namespace Motors
         right->setSpeed(abs(rightSpeed));
         left->run(leftSpeed >= 0 ? BACKWARD : FORWARD);
         right->run(rightSpeed >= 0 ? BACKWARD : FORWARD);
-        Serial.print("Motor speeds [L, R]: ");
-        Serial.print(leftSpeed);
-        Serial.print(", ");
-        Serial.println(rightSpeed);
+        // Serial.print("Motor speeds [L, R]: ");
+        // Serial.print(leftSpeed);
+        // Serial.print(", ");
+        // Serial.println(rightSpeed);
         return *this;
     }
     MotorPair &MotorPair::setSpeed(uint8_t speed)

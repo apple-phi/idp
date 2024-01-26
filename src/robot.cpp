@@ -24,8 +24,8 @@ Robot &Robot::readSensors()
     // ordered from left to right.
     auto readings = Sensors::digitalReadAll(line_sensors);
     encodedLineSensorReading = Sensors::encodeLineSensorReadings(readings);
-    Serial.print("Line sensor readings: ");
-    Helper::printVector(readings);
+    // Serial.print("Line sensor readings: ");
+    // Helper::printVector(readings);
     return *this;
 }
 
@@ -212,10 +212,32 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     // TODO: decide which way to turn,
     // based on the direction_matrix (see `direction_matrix.cpp`)
     // Make sure to check that `encodedLineSensorReadings` gives the right code for the expected junction!
+    Serial.println("--- Junction reached");
+
+    Serial.println("Target node: ");
+    Serial.println(targetNode);
+    Serial.println("Latest node: ");
+    Serial.println(latestNode);
+    Serial.println("Current direction: ");
+    Serial.println(currentDirection);
+
+    // Display input into navigation map
+    // Serial.print("Navigation map input: ");
+    // Helper::printPair<int>({latestNode, currentDirection});
+    // Serial.print("Navigation map output: ");
+    // Serial.println(Direction::navigation_map[{latestNode, currentDirection}]);
 
     // G: Update position and navigation, decide next direction
-    latestNode = Direction::navigation_map[arx::make_pair<int, int>(latestNode, currentDirection)];
+    // latestNode = Direction::navigation_map[{latestNode, currentDirection}];
+    latestNode = Direction::nav_matrix[latestNode][currentDirection];
     int targetDirection = Direction::dir_matrix[latestNode][targetNode];
+
+    Serial.print("New Target node: ");
+    Serial.println(targetNode);
+    Serial.print("New Target direction: ");
+    Serial.println(targetDirection);
+    Serial.print("New Latest node: ");
+    Serial.println(latestNode);
 
     // G: move forward a bit, probably be better to move until the sensors have left the junction
 
@@ -237,11 +259,11 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
 
     // G: replace these variables with the actual direciton we want to go in
 
-    // G: Left turn.
+    // G: Right turn.
     // G: Only time robot will turn 180 degrees is after picking up a block, no need to code it here.
-    if ((currentDirection == 1 && targetDirection == 2) || (currentDirection == 2 && targetDirection == -1) || (currentDirection == -1 && targetDirection == -2) || (currentDirection == -2 && targetDirection == 1))
+    if (Direction::isRightTurn(currentDirection, targetDirection))
     {
-        motors.setSpeedsAndRun(150, 0);
+        motors.setSpeedsAndRun(maxSpeed, 0);
         delay(500);
         while (encodedLineSensorReading != 0b0100)
         {
@@ -250,9 +272,9 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
             delay(10);
         }
     }
-    else // G: Right turn
+    else // G: left turn
     {
-        motors.setSpeedsAndRun(0, 150);
+        motors.setSpeedsAndRun(0, maxSpeed);
         delay(500);
         while (encodedLineSensorReading != 0b0010)
         {

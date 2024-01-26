@@ -5,7 +5,8 @@ import numpy as np
 import networkx as nx
 
 # Use N=-S and E=-W to make direction inverting easier
-N, E, S, W = 1, 2, -1, -2
+N, E, S, W = 0, 1, 2, 3
+opposites = {N: S, E: W, S: N, W: E}
 
 # Network in the format (node1, node2) : (weight, direction)
 # sorted by key
@@ -22,14 +23,14 @@ nodes = {
     (6, 7): (2, E),
     (7, 12): (2, N),
     (8, 9): (2, E),
-    # (8, 18): (1, N),
-    # (15, 18): (2, W),
+    (8, 18): (100, N),
+    (15, 18): (200, W),
     (9, 10): (1, E),
     (9, 13): (1, N),
     (10, 11): (1, S),
     (10, 12): (1, E),
-    # (12, 19): (1, N),
-    # (16, 19): (2, E),
+    (12, 19): (100, N),
+    (16, 19): (200, E),
     (13, 14): (1, W),
     (13, 15): (1, N),
     (15, 16): (1, E),
@@ -45,6 +46,10 @@ for (i, j), (w, d) in nodes.items():
     dod[i][j]["dir"] = d
 
 G = nx.Graph(dod)
+
+
+def getWeight(i, j, attributes):
+    return attributes["weight"]
 
 
 def arr_of_arr_to_cpp(arr: np.ndarray):
@@ -74,16 +79,34 @@ def gen_dir_mat():
     the direction matrix will contain the direction from i to j
     along the shortest path.
     """
-    sentinel = 0
+    sentinel = -1
     # The direction matrix has the same shape as the adjacency matrix
     arr = np.full_like(nx.adjacency_matrix(G).todense(), fill_value=sentinel)
     for i, j in itertools.product(G.nodes, G.nodes):
         if i == j:
             continue
-        target = nx.shortest_path(G, i, j)[1]  # 1st edge in shortest path
-        arr[i, j] = G.edges[i, target]["dir"] * (-1 if i > target else 1)
+        target = nx.shortest_path(G, i, j, weight=getWeight)[
+            1
+        ]  # 1st edge in shortest path
+        arr[i, j] = G.edges[i, target]["dir"]
+        if i > target:
+            arr[i, j] = opposites[arr[i, j]]
     assert np.all(np.diag(arr) == sentinel)
     assert collections.Counter(arr.flatten())[sentinel] == len(np.diag(arr))
+    return arr
+
+
+def gen_nav_mat():
+    sentinel = 0 - 1
+    arr = np.full((len(G.nodes), 4), fill_value=sentinel)
+    for i, j in itertools.product(G.nodes, G.nodes):
+        if i == j:
+            continue
+        target = nx.shortest_path(G, i, j, weight=getWeight)[1]
+        d = G.edges[i, target]["dir"]
+        if i > target:
+            d = opposites[d]
+        arr[i, d] = target
     return arr
 
 
@@ -121,4 +144,4 @@ def draw_graph():
 
 if __name__ == "__main__":
     print(arr_of_arr_to_cpp(gen_dir_mat()))
-    print(gen_navigation_matrix())
+    print(arr_of_arr_to_cpp(gen_nav_mat()))

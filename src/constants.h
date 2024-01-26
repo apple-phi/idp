@@ -25,4 +25,14 @@ namespace Helper
         Serial.println("]");
     }
 
+    template <typename T>
+    void printPair(arx::pair<T, T> p)
+    {
+        Serial.print("(");
+        Serial.print(p.first);
+        Serial.print(", ");
+        Serial.print(p.second);
+        Serial.println(")");
+    }
+
 }

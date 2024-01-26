@@ -2,12 +2,13 @@
 #include <ArxContainer.h>
 #include <Adafruit_MotorShield.h>
 #include "./motors.h"
+#include "./direction_matrix.h"
 class Robot
 {
 public:
-    int8_t currentDirection = 1;
-    int8_t latestNode = 1;
-    int8_t targetNode = 10;
+    int currentDirection = Direction::N;
+    int latestNode = 1;
+    int targetNode = 17;
     int maxSpeed = 200;
     Motors::MotorPair motors;
     arx::vector<pin_size_t> line_sensors;

@@ -4,6 +4,7 @@
 #include "./src/robot.h"
 #include "./src/motors.h"
 #include "./src/constants.h"
+#include "./src/direction_matrix.h"
 
 Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
