@@ -1,5 +1,5 @@
 #pragma once
-#include <ArxContainer.h>
+// #include <ArxContainer.h>
 
 namespace Direction
 {
@@ -9,5 +9,5 @@ namespace Direction
 
     extern int dir_matrix[20][20];
     extern int nav_matrix[20][4];
-    extern arx::map<arx::pair<int, int>, int> navigation_map;
+    // extern arx::map<arx::pair<int, int>, int> navigation_map;
 }

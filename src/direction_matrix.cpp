@@ -1,4 +1,7 @@
-#include <ArxContainer.h>
+// #include <ArxContainer.h>
+// #define ARX_VECTOR_DEFAULT_SIZE 255
+// #define ARX_MAP_DEFAULT_SIZE 255
+// #define ARX_DEQUE_DEFAULT_SIZE 255
 
 namespace Direction
 {

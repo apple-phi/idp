@@ -117,13 +117,10 @@ def gen_navigation_matrix():
         if i == j:
             continue
         target = nx.shortest_path(G, i, j)[1]
-        pairs.add(
-            "{{"
-            + f"{i}, {G.edges[i, target]['dir'] * (-1 if i > target else 1)}"
-            + "}"
-            + f", {target}"
-            + "},"
-        )
+        d = G.edges[i, target]["dir"]
+        if i > target:
+            d = opposites[d]
+        pairs.add("{{" + f"{i}, {d}" + "}" + f", {target}" + "},")
     return (
         "arx::map<arx::pair<int, int>, int> navigation_map = {\n"
         + "\n".join(pairs)
