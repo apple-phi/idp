@@ -24,8 +24,8 @@ Robot &Robot::readSensors()
     // ordered from left to right.
     auto readings = Sensors::digitalReadAll(line_sensors);
     encodedLineSensorReading = Sensors::encodeLineSensorReadings(readings);
-    Serial.print("Line sensor readings: ");
-    Helper::printVector(readings);
+    // Serial.print("Line sensor readings: ");
+    // Helper::printVector(readings);
     return *this;
 }
 
@@ -146,18 +146,34 @@ Robot &Robot::assignAngleError()
         Serial.println(encodedLineSensorReading);
         break;
     }
-    return *this;
+    // return *this;
 }
 
 Robot &Robot::drive()
 {
-    if (drivingMode == FOLLOW)
+    // G: If the robot is about to pick up a cube, stop and turn around
+    if (latestNode == targetNode)
     {
-        steeringCorrection();
+        stageDecision();
     }
-    else if (drivingMode == TURN)
-    {
-        junctionDecision(encodedLineSensorReading);
+
+    switch (drivingMode){
+        case FOLLOW:
+            assignAngleError();
+            steeringCorrection();
+            break;
+        case TURN:
+            junctionDecision(encodedLineSensorReading);
+            break;
+        case LTURN:
+            junctionTurn(encodedLineSensorReading, true);
+            break;
+        case RTURN:
+            junctionTurn(encodedLineSensorReading, false);
+            break;
+        default:
+            motors.stop();
+            break;
     }
     return *this;
 }
@@ -204,69 +220,125 @@ Robot &Robot::steeringCorrection()
     {
         motors.setSpeedsAndRun(maxSpeed, maxSpeed);
     }
-    return *this;
 }
 
 Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
 {
-    // TODO: decide which way to turn,
-    // based on the direction_matrix (see `direction_matrix.cpp`)
-    // Make sure to check that `encodedLineSensorReadings` gives the right code for the expected junction!
-
     // G: Update position and navigation, decide next direction
-    latestNode = Direction::navigation_map[arx::make_pair<int, int>(latestNode, currentDirection)];
-    int targetDirection = Direction::dir_matrix[latestNode][targetNode];
+    Serial.println("here");
+    Serial.println(Direction::nav_matrix[1][0]);
+    
+    Serial.println("latestNode; targetDirection;");
+    Serial.println(latestNode);
+    Serial.println(targetDirection);
 
-    // G: move forward a bit, probably be better to move until the sensors have left the junction
+    latestNode = Direction::nav_matrix[latestNode][targetDirection];
+    targetDirection = Direction::dir_matrix[latestNode][targetNode];
 
+    Serial.println("Junction; targetNode; currentDirection; targetDirection;");
+    Serial.println(latestNode);
+    Serial.println(targetNode);
+    Serial.println(currentDirection);
+    Serial.println(targetDirection);
+
+    // G: mark the stop, not necessary
     motors.stop();
     delay(1000);
+    
+     // G: move forward a bit
     motors.setSpeedsAndRun(150, 150);
     delay(100);
 
+    // G: If already facing the right direction, keep going and break
     if (targetDirection == currentDirection)
     {
-        delay(400);
+        delay(300);
         return *this;
     }
 
-    // N = 1,
-    // E = 2,
-    // S = -1,
-    // W = -2,
-
-    // G: replace these variables with the actual direciton we want to go in
-
     // G: Left turn.
-    // G: Only time robot will turn 180 degrees is after picking up a block, no need to code it here.
-    if ((currentDirection == 1 && targetDirection == 2) || (currentDirection == 2 && targetDirection == -1) || (currentDirection == -1 && targetDirection == -2) || (currentDirection == -2 && targetDirection == 1))
+    if (currentDirection - targetDirection == 1 || targetDirection - currentDirection == 3)
     {
-        motors.setSpeedsAndRun(150, 0);
+        motors.setSpeedsAndRun(175, 0);
+        drivingMode = LTURN;
         delay(500);
-        while (encodedLineSensorReading != 0b0100)
-        {
-            this->readSensors(); // need update sensor
-            // need update sensor
-            delay(10);
-        }
     }
     else // G: Right turn
     {
-        motors.setSpeedsAndRun(0, 150);
+        motors.setSpeedsAndRun(0, 175);
+        drivingMode = RTURN;
         delay(500);
-        while (encodedLineSensorReading != 0b0010)
-        {
-            this->readSensors(); // need update sensor
-            // need update sensor
-            delay(10);
-        }
     }
+    return *this;
+}
 
-    currentDirection = targetDirection;
+Robot &Robot::junctionTurn(uint8_t encodedLineSensorReadings, bool leftTurn)
+{
+    if ((leftTurn && encodedLineSensorReadings == 0b0100) || (!leftTurn && encodedLineSensorReadings == 0b0010))
+    {
+        motors.stop();
+        drivingMode = FOLLOW;
+        currentDirection = targetDirection;
+    }
+    return *this;
+}
 
-    // G: We need to leave the junction to avoid this code being run again
-    // motors.setSpeedsAndRun(255, 255);
-    // delay(500);
-    // motors.stop();
+Robot &Robot::stageDecision()
+{
+    // G: Stage 0,  go to node 5;  Stage 1,  pick up cube; Stage 2,  go to node 0 or 2; Stage 3,  drop off cube;
+
+    // G: Stage 4,  go to node 11; Stage 5,  pick up cube; Stage 6,  go to node 0 or 2; Stage 7,  drop off cube;
+
+    // G: Stage 8,  go to node 14; Stage 9,  pick up cube; Stage 10, go to node 0 or 2; Stage 11, drop off cube;
+
+    // G: Stage 12, go to node 17; Stage 13, pick up cube; Stage 14, go to node 0 or 2; Stage 15, drop off cube;
+    stage++;
+    switch (stage)
+    {
+        case 1:
+            break;
+
+        case 2:
+            break;
+        
+        case 3:
+            break;
+        
+        case 4:
+            break;
+        
+        case 5:
+            break;
+        
+        case 6:
+            break;
+        
+        case 7:
+            break;
+        
+        case 8:
+            break;
+
+        case 9:
+            break;
+        
+        case 10:
+            break;
+        
+        case 11:
+            break;
+        
+        case 12:
+            break;
+        
+        case 13:
+            break;
+        
+        case 14:
+            break;
+        
+        case 15:
+            break;
+    }
     return *this;
 }

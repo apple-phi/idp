@@ -5,7 +5,8 @@ import numpy as np
 import networkx as nx
 
 # Use N=-S and E=-W to make direction inverting easier
-N, E, S, W = 1, 2, -1, -2
+N, E, S, W = 0, 1, 2, 3
+opposites = {N: S, E: W, S: N, W: E}
 
 # Network in the format (node1, node2) : (weight, direction)
 # sorted by key
@@ -74,14 +75,16 @@ def gen_dir_mat():
     the direction matrix will contain the direction from i to j
     along the shortest path.
     """
-    sentinel = 0
+    sentinel = -1
     # The direction matrix has the same shape as the adjacency matrix
     arr = np.full_like(nx.adjacency_matrix(G).todense(), fill_value=sentinel)
     for i, j in itertools.product(G.nodes, G.nodes):
         if i == j:
             continue
         target = nx.shortest_path(G, i, j)[1]  # 1st edge in shortest path
-        arr[i, j] = G.edges[i, target]["dir"] * (-1 if i > target else 1)
+        arr[i, j] = G.edges[i, target]["dir"]
+        if i>target:
+            arr[i, j] = opposites[arr[i, j]]
     assert np.all(np.diag(arr) == sentinel)
     assert collections.Counter(arr.flatten())[sentinel] == len(np.diag(arr))
     return arr
@@ -94,9 +97,12 @@ def gen_navigation_matrix():
         if i == j:
             continue
         target = nx.shortest_path(G, i, j)[1]
+        d = G.edges[i, target]["dir"]
+        if i > target:
+            d = opposites[d]
         pairs.add(
             "{{"
-            + f"{i}, {G.edges[i, target]['dir'] * (-1 if i > target else 1)}"
+            + f"{i}, {d}"
             + "}"
             + f", {target}"
             + "},"
