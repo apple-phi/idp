@@ -105,7 +105,7 @@ Robot &Robot::assignAngleError()
 
     // G: Junction reached
     case 0b0011:
-        drivingMode = TURN;
+        junctionDecision(encodedLineSensorReading);
         angleError = 0;
         break;
 
@@ -115,7 +115,7 @@ Robot &Robot::assignAngleError()
 
     // G: Junction reached
     case 0b1100:
-        drivingMode = TURN;
+        junctionDecision(encodedLineSensorReading);
         angleError = 0;
         break;
 
@@ -125,20 +125,20 @@ Robot &Robot::assignAngleError()
 
     // G: Junction reached
     case 0b0111:
-        drivingMode = TURN;
+        junctionDecision(encodedLineSensorReading);
         angleError = 0;
         break;
 
     // G: Junction reached
     case 0b1110:
-        drivingMode = TURN;
+        junctionDecision(encodedLineSensorReading);
         angleError = 0;
         break;
 
     // G: Junction reached
     case 0b1111:
         angleError = 0;
-        drivingMode = TURN;
+        junctionDecision(encodedLineSensorReading);
         break;
 
     default:
@@ -153,11 +153,29 @@ Robot &Robot::drive()
 {
     if (drivingMode == FOLLOW)
     {
-        steeringCorrection();
+        assignAngleError();
     }
-    else if (drivingMode == TURN)
+    switch (drivingMode)
     {
-        junctionDecision(encodedLineSensorReading);
+    case FOLLOW:
+        steeringCorrection();
+        break;
+    case LEFT_TURN:
+        motors.setSpeedsAndRun(0, maxSpeed);
+        if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 250)
+        {
+            drivingMode = FOLLOW;
+            lastJunctionSeenAt = millis();
+        }
+        break;
+    case RIGHT_TURN:
+        motors.setSpeedsAndRun(maxSpeed, 0);
+        if ((encodedLineSensorReading == 0b0010 || encodedLineSensorReading == 0b0011) && millis() - lastJunctionSeenAt > 250)
+        {
+            drivingMode = FOLLOW;
+            lastJunctionSeenAt = millis();
+        }
+        break;
     }
     return *this;
 }
@@ -212,83 +230,41 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     // TODO: decide which way to turn,
     // based on the direction_matrix (see `direction_matrix.cpp`)
     // Make sure to check that `encodedLineSensorReadings` gives the right code for the expected junction!
-    Serial.println("--- Junction reached");
 
-    Serial.println("Target node: ");
-    Serial.println(targetNode);
-    Serial.println("Latest node: ");
-    Serial.println(latestNode);
-    Serial.println("Current direction: ");
-    Serial.println(currentDirection);
+    if (millis() - lastJunctionSeenAt < 500)
+    {
+        drivingMode = FOLLOW;
+        return *this;
+    }
+    lastJunctionSeenAt = millis();
 
-    // Display input into navigation map
-    // Serial.print("Navigation map input: ");
-    // Helper::printPair<int>({latestNode, currentDirection});
-    // Serial.print("Navigation map output: ");
-    // Serial.println(Direction::navigation_map[{latestNode, currentDirection}]);
-
-    // G: Update position and navigation, decide next direction
-    // latestNode = Direction::navigation_map[{latestNode, currentDirection}];
     latestNode = Direction::nav_matrix[latestNode][currentDirection];
+    if (latestNode == targetNode)
+    {
+        motors.stop();
+        delay(1000);
+        targetNode = (targetNode + 13) % 17;
+    }
     int targetDirection = Direction::dir_matrix[latestNode][targetNode];
-
-    Serial.print("New Target node: ");
-    Serial.println(targetNode);
-    Serial.print("New Target direction: ");
-    Serial.println(targetDirection);
-    Serial.print("New Latest node: ");
-    Serial.println(latestNode);
 
     // G: move forward a bit, probably be better to move until the sensors have left the junction
 
-    motors.stop();
-    delay(1000);
-    motors.setSpeedsAndRun(150, 150);
-    delay(100);
-
     if (targetDirection == currentDirection)
     {
-        delay(400);
+        drivingMode = FOLLOW;
         return *this;
     }
 
-    // N = 1,
-    // E = 2,
-    // S = -1,
-    // W = -2,
-
-    // G: replace these variables with the actual direciton we want to go in
-
-    // G: Right turn.
     // G: Only time robot will turn 180 degrees is after picking up a block, no need to code it here.
     if (Direction::isRightTurn(currentDirection, targetDirection))
     {
-        motors.setSpeedsAndRun(maxSpeed, 0);
-        delay(500);
-        while (encodedLineSensorReading != 0b0100)
-        {
-            this->readSensors(); // need update sensor
-            // need update sensor
-            delay(10);
-        }
+        drivingMode = RIGHT_TURN;
     }
     else // G: left turn
     {
-        motors.setSpeedsAndRun(0, maxSpeed);
-        delay(500);
-        while (encodedLineSensorReading != 0b0010)
-        {
-            this->readSensors(); // need update sensor
-            // need update sensor
-            delay(10);
-        }
+        drivingMode = LEFT_TURN;
     }
 
     currentDirection = targetDirection;
-
-    // G: We need to leave the junction to avoid this code being run again
-    // motors.setSpeedsAndRun(255, 255);
-    // delay(500);
-    // motors.stop();
     return *this;
 }

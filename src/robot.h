@@ -9,7 +9,7 @@ public:
     int currentDirection = Direction::N;
     int latestNode = 1;
     int targetNode = 17;
-    int maxSpeed = 200;
+    int maxSpeed = 255;
     Motors::MotorPair motors;
     arx::vector<pin_size_t> line_sensors;
     Robot(Motors::MotorPair motors, arx::vector<pin_size_t> line_sensors);
@@ -20,11 +20,13 @@ public:
     Robot &junctionDecision(uint8_t sensorCode);
 
 private:
+    float lastJunctionSeenAt = -1;
     uint8_t encodedLineSensorReading = 0b0110;
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
     enum
     {
         FOLLOW,
-        TURN
+        LEFT_TURN,
+        RIGHT_TURN
     } drivingMode = FOLLOW;
 };
