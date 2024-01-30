@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Servo.h>
 #include <Adafruit_MotorShield.h>
 #include <ArxContainer.h>
 #include "./src/robot.h"
@@ -10,6 +11,8 @@ Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *left = AFMS.getMotor(1);
 Adafruit_DCMotor *right = AFMS.getMotor(2);
+Servo arm;
+Servo claw;
 
 void setup()
 {
@@ -21,6 +24,13 @@ void setup()
             ;
     }
     Serial.println("Motor Shield found.");
+
+    arm.attach(9);
+    claw.attach(8);
+    arm.write(-20);
+    claw.write(10);
+    delay(500);
+    Serial.println("Arm and claw servos attached.");
 
     Serial.println("Waiting for start button...");
     pinMode(1, INPUT); // Start button
