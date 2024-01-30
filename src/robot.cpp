@@ -4,7 +4,7 @@
 #include "./motors.h"
 #include "./direction_matrix.h"
 
-// cppcheck-suppress passedByValue
+// // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : motors(motors_), line_sensors(line_sensors_)
 {
     motors

@@ -8,17 +8,12 @@
 
 Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-// Or, create it with a different I2C address (say for stacking)
-// Adafruit_MotorShield AFMS = Adafruit_MotorShield(0x61);
-
-// Select which 'port' M1, M2, M3 or M4. In this case, M1
 Adafruit_DCMotor *left = AFMS.getMotor(1);
 Adafruit_DCMotor *right = AFMS.getMotor(2);
 
 void setup()
 {
     Serial.begin(9600);
-    Serial.println("Adafruit Motorshield v2 - DC Motor test!");
     if (!AFMS.begin())
     {
         Serial.println("Could not find Motor Shield. Check wiring.");
@@ -27,11 +22,27 @@ void setup()
     }
     Serial.println("Motor Shield found.");
 
+    Serial.println("Waiting for start button...");
+    pinMode(1, INPUT); // Start button
+    while (digitalRead(1) == LOW)
+    {
+        delay(1000 * DT);
+    }
+    Serial.println("Start button pressed.");
     robot = new Robot({left, right}, {13, 12, 11, 10});
+
+    // Go straight for 1 second
+    // TODO: toggle LED
+    robot->motors.run(FORWARD).setSpeed(255);
+    for (int i = 0; i < 1000 / DT; i++)
+    {
+        delay(1000 * DT);
+    }
 }
 
 void loop()
 {
+    // TODO: toggle LED
     robot->readSensors();
     robot->drive();
     delay(1000 * DT);
