@@ -1,4 +1,3 @@
-#include <ArxContainer.h>
 
 namespace Direction
 {

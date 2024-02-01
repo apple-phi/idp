@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Servo.h>
 #include <Adafruit_MotorShield.h>
-#include <ArxContainer.h>
 #include "./src/robot.h"
 #include "./src/motors.h"
 #include "./src/constants.h"
@@ -29,25 +28,21 @@ void beginMotors()
 
 void handleStartButton()
 {
-    Serial.println("Waiting for start button...");
-    pinMode(2, INPUT); // Start button
-    while (digitalRead(2) == LOW)
+    startButton = new Sensors::Button(2);
+    while (!startButton->pressed())
     {
-        delay(1000 * DT);
+        delay(10);
     }
-    Serial.println("Start button pressed.");
     delay(500);
 }
 
-void (*reset)(void) = 0;
+void reset() { asm volatile("jmp 0"); }
 
 void checkRobotReset()
 {
-    if (digitalRead(2) == HIGH)
+    if (startButton->pressed())
     {
-        // delete robot;
         reset();
-        // setup();
     }
 }
 
