@@ -9,16 +9,12 @@ namespace Motors
     }
     /* This also handles negative speeds, but not speeds out of the maximum...
     It handles motor running already */
-    MotorPair &MotorPair::setSpeedsAndRun(int16_t leftSpeed, int16_t rightSpeed)
+    MotorPair &MotorPair::setSpeedsAndRun(int leftSpeed, int rightSpeed)
     {
         left->setSpeed(abs(leftSpeed));
         right->setSpeed(abs(rightSpeed));
         left->run(leftSpeed >= 0 ? BACKWARD : FORWARD);
         right->run(rightSpeed >= 0 ? BACKWARD : FORWARD);
-        // Serial.print("Motor speeds [L, R]: ");
-        // Serial.print(leftSpeed);
-        // Serial.print(", ");
-        // Serial.println(rightSpeed);
         return *this;
     }
     MotorPair &MotorPair::setSpeed(uint8_t speed)

@@ -29,4 +29,21 @@ namespace Sensors
         }
         return e;
     }
+
+    Button::Button(pin_size_t pin) : pin(pin)
+    {
+        pinMode(pin, INPUT);
+    }
+    bool Button::pressed()
+    {
+        return digitalRead(pin) == HIGH;
+    }
+
+    float UltraSonicTheHedgehog::gradient()
+    {
+        value = analogRead(pin);
+        float g = value - prev_value;
+        prev_value = value;
+        return g;
+    }
 }

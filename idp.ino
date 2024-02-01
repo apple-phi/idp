@@ -5,6 +5,7 @@
 #include "./src/robot.h"
 #include "./src/motors.h"
 #include "./src/constants.h"
+#include "./src/sensor.h"
 #include "./src/direction_matrix.h"
 
 Robot *robot;
@@ -13,10 +14,10 @@ Adafruit_DCMotor *left = AFMS.getMotor(1);
 Adafruit_DCMotor *right = AFMS.getMotor(2);
 Servo arm;
 Servo claw;
+Sensors::Button *startButton;
 
-void setup()
+void beginMotors()
 {
-    Serial.begin(9600);
     if (!AFMS.begin())
     {
         Serial.println("Could not find Motor Shield. Check wiring.");
@@ -24,35 +25,52 @@ void setup()
             ;
     }
     Serial.println("Motor Shield found.");
+}
 
-    arm.attach(9);
-    claw.attach(8);
-    arm.write(-20);
-    claw.write(10);
-    delay(500);
-    Serial.println("Arm and claw servos attached.");
-
+void handleStartButton()
+{
     Serial.println("Waiting for start button...");
-    pinMode(1, INPUT); // Start button
-    while (digitalRead(1) == LOW)
+    pinMode(2, INPUT); // Start button
+    while (digitalRead(2) == LOW)
     {
         delay(1000 * DT);
     }
     Serial.println("Start button pressed.");
-    robot = new Robot({left, right}, {13, 12, 11, 10});
+    delay(500);
+}
 
-    // Go straight for 1 second
-    // TODO: toggle LED
-    robot->motors.run(FORWARD).setSpeed(255);
-    for (int i = 0; i < 1000 / DT; i++)
+void (*reset)(void) = 0;
+
+void checkRobotReset()
+{
+    if (digitalRead(2) == HIGH)
     {
-        delay(1000 * DT);
+        // delete robot;
+        reset();
+        // setup();
     }
+}
+
+void setup()
+{
+    Serial.begin(9600);
+    beginMotors();
+    // arm.attach(9);
+    // claw.attach(8);
+    // arm.write(-20);
+    // claw.write(10);
+    // delay(500);
+    // Serial.println("Arm and claw servos attached.");
+    robot = new Robot({left, right}, {13, 12, 11, 10});
+    Direction::nav_matrix[robot->latestNode][robot->currentDirection] = 1;
+    delay(500);
+    handleStartButton();
 }
 
 void loop()
 {
     // TODO: toggle LED
+    checkRobotReset();
     robot->readSensors();
     robot->drive();
     delay(1000 * DT);
