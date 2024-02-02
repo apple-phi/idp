@@ -5,7 +5,7 @@
 #include "./src/motors.h"
 #include "./src/constants.h"
 #include "./src/sensor.h"
-#include "./src/direction_matrix.h"
+#include "./src/led.h"
 
 Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -14,6 +14,7 @@ Adafruit_DCMotor *right = AFMS.getMotor(2);
 Servo arm;
 Servo claw;
 Sensors::Button *startButton;
+LED *moveLED;
 
 void beginMotors()
 {
@@ -36,20 +37,18 @@ void handleStartButton()
     delay(500);
 }
 
-void reset() { asm volatile("jmp 0"); }
-
-void checkRobotReset()
+void reset()
 {
-    if (startButton->pressed())
-    {
-        reset();
-    }
+    delete robot;
+    robot = new Robot({left, right}, {13, 12, 11, 10});
+    asm volatile("jmp 0");
 }
 
 void setup()
 {
     Serial.begin(9600);
     beginMotors();
+    moveLED = new LED(3);
     // arm.attach(9);
     // claw.attach(8);
     // arm.write(-20);
@@ -64,9 +63,16 @@ void setup()
 
 void loop()
 {
-    // TODO: toggle LED
-    checkRobotReset();
-    robot->readSensors();
-    robot->drive();
+    if (startButton->pressed())
+    {
+        reset();
+    }
+    if (millis() % 100 <= 10)
+    {
+        moveLED->toggle();
+    }
+    (*robot)
+        .readSensors()
+        .drive();
     delay(1000 * DT);
 }

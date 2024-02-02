@@ -3,6 +3,7 @@
 #include "./constants.h"
 #include "./motors.h"
 #include "./direction_matrix.h"
+#include "./steering.h"
 
 // // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
@@ -29,91 +30,6 @@ Robot &Robot::readSensors()
     return *this;
 }
 
-Robot &Robot::assignAngleError()
-{
-    // Set an associated angle error for each reading.
-    // This is the angle that the robot will read to correct its steering.
-    // Positive is too far right, negative is too far left.
-    // Currently these are arbitrary values.
-    // TODO: Calibrate these values
-
-    // The encoded line sensor reading is a 4-bit number,
-    // where each bit represents a sensor,
-    // ordered from left to right.
-    switch (encodedLineSensorReading)
-    {
-    case 0b0000:
-    case 0b0110:
-        drivingMode = FOLLOW;
-        angleError = 0;
-        break;
-
-    // G: Weird sensor, just keep doing what it's doing
-    case 0b1001:
-    case 0b1011:
-    case 0b1101:
-        break;
-
-    case 0b0001: // Very far left of line
-        drivingMode = FOLLOW;
-        angleError = -70;
-        break;
-
-    case 0b1000: // Very far right of line
-        drivingMode = FOLLOW;
-        angleError = 70;
-        break;
-
-    case 0b0010: // Slightly too far left of line
-        drivingMode = FOLLOW;
-        angleError = -15;
-        break;
-
-    case 0b0100: // Slightly too far right of line
-        drivingMode = FOLLOW;
-        angleError = 15;
-        break;
-
-    // Just before a junction,
-    // offset to the right
-    // and angled left,
-    // into the junction.
-    // But if we keep going,
-    // we'll be fine!
-    case 0b0101:
-        drivingMode = FOLLOW;
-        angleError = -20; // G: Consider revisiting this scenario
-        break;
-
-    // Just before a junction,
-    // offset to the left
-    // and angled right,
-    // into the junction.
-    // But if we keep going,
-    // we'll be fine!
-    case 0b1010:
-        drivingMode = FOLLOW;
-        angleError = +20; // G: Consider revisiting this scenario
-        break;
-
-    // G: Junction reached
-    case 0b0011:
-    case 0b1100:
-    case 0b0111:
-    case 0b1110:
-    case 0b1111:
-        angleError = 0;
-        junctionDecision(encodedLineSensorReading);
-        break;
-
-    default:
-        Serial.println("Invalid sensor code:");
-        Serial.println(encodedLineSensorReading);
-        break;
-    }
-    return *this;
-}
-
 Robot &Robot::drive()
 {
     switch (deliveryTask)
@@ -121,12 +37,12 @@ Robot &Robot::drive()
     case FETCH:
         if (drivingMode == FOLLOW)
         {
-            assignAngleError();
+            Steering::assignAngleError(*this);
         }
         switch (drivingMode)
         {
         case FOLLOW:
-            steeringCorrection();
+            Steering::correctSteering(*this);
             // -1 gives the node right before due to node ordering
             if (latestNode == targetNode - 1)
             {
@@ -135,27 +51,30 @@ Robot &Robot::drive()
             break;
         case LEFT_TURN:
             wheelMotors.setSpeedsAndRun(0, maxSpeed);
-            if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 250)
+            if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 500)
             {
                 drivingMode = FOLLOW;
                 lastJunctionSeenAt = millis();
+                lineFollowPID.reset();
             }
             break;
         case RIGHT_TURN:
             wheelMotors.setSpeedsAndRun(maxSpeed, 0);
-            if ((encodedLineSensorReading == 0b0010 || encodedLineSensorReading == 0b0011) && millis() - lastJunctionSeenAt > 250)
+            if ((encodedLineSensorReading == 0b0010 || encodedLineSensorReading == 0b0011) && millis() - lastJunctionSeenAt > 500)
             {
                 drivingMode = FOLLOW;
                 lastJunctionSeenAt = millis();
+                lineFollowPID.reset();
             }
             break;
         }
         break;
     case GRAB:
-        wheelMotors.setSpeedsAndRun(-255, 255);
-        while (true)
-        {
-        }
+        // wheelMotors.setSpeedsAndRun(-255, 255);
+        wheelMotors.stop();
+        delay(1000);
+        deliveryTask = FETCH; // TODO: this is a placeholder
+        targetNode = (targetNode + 23) / 7;
         break;
     case DELIVER:
         break;
@@ -163,57 +82,9 @@ Robot &Robot::drive()
     return *this;
 }
 
-/*
-Implement a single step of the controller.
-https://controlguru.com/pid-with-controller-output-co-filter/
-TODO: tune constants
-TODO: add more filters? https://controlguru.com/using-signal-filters-in-our-pid-loop/
-TODO: add feed forward control into the open loop
-*/
-Robot &Robot::steeringCorrection()
+Robot &Robot::junctionDecision()
 {
-    const float Kc = 0.02;
-    const float Ti = 1.1;
-    const float Td = 0;
-    const float alpha = 0; // Note: T_f = alpha * T_d
-    const float e = angleError;
-
-    static float prevError = 0;
-    static double errorIntegral = 0;
-    static float prevCo = 0;
-
-    const float pidCo = Kc * e + Kc * Td * ((e - prevError) / DT) + (Kc / Ti) * errorIntegral;
-    const float filteredCo = pidCo; // prevCo + DT / (alpha * Td) * (pidCo - prevCo);
-    prevError = e;
-    prevCo = filteredCo;
-    errorIntegral += e * DT;
-
-    // Now apply the correction to the motors
-    // +ve error means too far right, so turn left
-    // and $ error \approx K_{c}\times e $ so
-    const float rightSpeedMinusLeftSpeed = Helper::clamp<float>(filteredCo * maxSpeed, -maxSpeed, +maxSpeed); // TODO: tune this
-    if (rightSpeedMinusLeftSpeed < 0)
-    {
-        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed + rightSpeedMinusLeftSpeed);
-    }
-    else if (rightSpeedMinusLeftSpeed > 0)
-    {
-        wheelMotors.setSpeedsAndRun(maxSpeed - rightSpeedMinusLeftSpeed, maxSpeed);
-    }
-    else
-    {
-        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
-    }
-    return *this;
-}
-
-Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
-{
-    // TODO: decide which way to turn,
-    // based on the direction_matrix (see `direction_matrix.cpp`)
-    // Make sure to check that `encodedLineSensorReadings` gives the right code for the expected junction!
-
-    if (millis() - lastJunctionSeenAt < 500)
+    if (millis() - lastJunctionSeenAt < 700)
     {
         drivingMode = FOLLOW;
         return *this;
@@ -223,6 +94,9 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
     latestNode = Direction::nav_matrix[latestNode][currentDirection];
     int targetDirection = Direction::dir_matrix[latestNode][targetNode];
 
+    Serial.print("Reached: ");
+    Serial.println(latestNode);
+
     // G: move forward a bit, probably be better to move until the sensors have left the junction
 
     if (targetDirection == currentDirection)
@@ -231,14 +105,21 @@ Robot &Robot::junctionDecision(uint8_t encodedLineSensorReadings)
         return *this;
     }
 
-    // G: Only time robot will turn 180 degrees is after picking up a block, no need to code it here.
     if (Direction::isRightTurn(currentDirection, targetDirection))
     {
         drivingMode = RIGHT_TURN;
+        Serial.println("Right turn");
     }
-    else // G: left turn
+    else if (Direction::isLeftTurn(currentDirection, targetDirection))
     {
         drivingMode = LEFT_TURN;
+        Serial.println("180");
+    }
+    else
+    {
+        drivingMode = FOLLOW;
+        targetDirection = currentDirection;
+        Serial.println("Continue straight");
     }
 
     currentDirection = targetDirection;

@@ -1,7 +1,7 @@
 #pragma once
 #include <ArxContainer.h>
 
-#define DT 0.1
+#define DT 0.010 // 10ms
 
 namespace Helper
 {
