@@ -1,4 +1,4 @@
-
+#include "./direction_matrix.h"
 namespace Direction
 {
     int N = 0,
