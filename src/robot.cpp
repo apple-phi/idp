@@ -44,10 +44,24 @@ Robot &Robot::drive()
         case FOLLOW:
             Steering::correctSteering(*this);
             // -1 gives the node right before due to node ordering
-            if (latestNode == targetNode - 1)
+            switch (blockNodeIndex)
             {
-                deliveryTask = GRAB;
+            case 0:
+            case 1:
+                if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode))
+                {
+                    deliveryTask = ENTER_ZONE;
+                }
+                break;
+            case 2:
+            case 3:
+                if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode))
+                {
+                    deliveryTask = ENTER_ZONE;
+                }
+                break;
             }
+
             break;
         case LEFT_TURN:
             wheelMotors.setSpeedsAndRun(0, maxSpeed);
@@ -69,14 +83,62 @@ Robot &Robot::drive()
             break;
         }
         break;
+    case ENTER_ZONE:
+        switch (blockNodeIndex)
+        {
+        // First two blocks
+        // ENTER_ZONE starts from the turn into the zone
+        case 0:
+        case 1:
+            Steering::assignAngleError(*this);
+            if (angleError > 10)
+            {
+                Steering::correctSteering(*this);
+                break;
+            }
+            deliveryTask = GRAB;
+            break;
+
+        // Last two blocks
+        // ENTER_ZONE starts from the node before the turn into the zone
+        case 2:
+            // TODO: You are at node 9 (or 15)
+            // Go forwards a bit then turn
+            // Then change deliveryTask to GRAB
+            break;
+        case 3:
+            // TODO: You are at node 9 (or 15)
+            // Go forwards a bit then turn
+            break;
+        }
+        break;
     case GRAB:
-        // wheelMotors.setSpeedsAndRun(-255, 255);
-        wheelMotors.stop();
-        delay(1000);
-        deliveryTask = FETCH; // TODO: this is a placeholder
-        targetNode = (targetNode + 23) / 7;
+        // TODO: locate block and pick it up
+        // Maybe add a sub-state for grab_task being an enum of {SEARCH, APPROACH, GRAB} ?
+        // Then change deliveryTask to EXIT_ZONE
+        break;
+    case EXIT_ZONE:
+        // TODO: reverse out of the zone
+        // Set the current node and direction appropriately so the robot knows where it is
+        // Then change deliveryTask to DELIVER
+        switch (blockNodeIndex)
+        {
+        case 0:
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        }
         break;
     case DELIVER:
+        // TODO: change target node to the correct delivery zone
+        // Then line follow and navigate to the delivery zone
+        // Might need to abstract out the above FETCH case so that the code can be reused.
+        // Might need an extra state for DROP_OFF
+        // Then increase blockNodeIndex and set the new targetNode
+        // Then change deliveryTask to FETCH
         break;
     }
     return *this;
@@ -91,8 +153,8 @@ Robot &Robot::junctionDecision()
     }
     lastJunctionSeenAt = millis();
 
-    latestNode = Direction::nav_matrix[latestNode][currentDirection];
-    int targetDirection = Direction::dir_matrix[latestNode][targetNode];
+    latestNode = Direction::nextNode(latestNode, currentDirection);
+    int targetDirection = Direction::nextDir(latestNode, targetNode);
 
     Serial.print("Reached: ");
     Serial.println(latestNode);
