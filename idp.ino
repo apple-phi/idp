@@ -63,7 +63,7 @@ void loop()
     {
         reset();
     }
-    if (millis() % 100 <= 10)
+    if (robot->wheelMotors.isMoving() && millis() % 100 <= 10)
     {
         moveLED->toggle();
     }

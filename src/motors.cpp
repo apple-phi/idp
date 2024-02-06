@@ -15,12 +15,13 @@ namespace Motors
         right->setSpeed(abs(rightSpeed));
         left->run(leftSpeed >= 0 ? BACKWARD : FORWARD);
         right->run(rightSpeed >= 0 ? BACKWARD : FORWARD);
+        absLeftSpeed = abs(leftSpeed);
+        absRightSpeed = abs(rightSpeed);
         return *this;
     }
     MotorPair &MotorPair::setSpeed(uint8_t speed)
     {
-        left->setSpeed(speed);
-        right->setSpeed(speed);
+        setSpeedsAndRun(speed, speed);
         return *this;
     }
     MotorPair &MotorPair::run(uint8_t direction)
@@ -34,6 +35,11 @@ namespace Motors
         run(RELEASE);
         return *this;
     }
+    bool MotorPair::isMoving()
+    {
+        return (absLeftSpeed > 0 || absRightSpeed > 0);
+    }
+
     Servos::Servos()
     {
         arm.attach(9);
