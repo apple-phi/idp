@@ -28,5 +28,7 @@ namespace Motors
         Servos &setClaw(int angle);
         Servos &setArm(int angle);
         Servos &reset();
+        int armAngle;
+        int clawAngle;
     };
 }

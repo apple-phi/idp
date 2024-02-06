@@ -44,48 +44,48 @@ namespace Motors
     {
         arm.attach(9);
         claw.attach(8);
+        armAngle = arm.read();
+        clawAngle = claw.read();
     }
     Servos &Servos::setClaw(int angle)
     {
-        int initial = claw.read();
-        bool isIncreasing = angle > initial;
-        while (initial != angle)
+        bool isIncreasing = angle > clawAngle;
+        while (clawAngle != angle)
         {
             if (isIncreasing)
             {
-                initial++;
+                clawAngle++;
             }
             else
             {
-                initial--;
+                clawAngle--;
             }
-            claw.write(initial);
+            claw.write(clawAngle);
             delay(30);
         }
         return *this;
     }
     Servos &Servos::setArm(int angle)
     {
-        int initial = arm.read();
-        bool isIncreasing = angle > initial;
-        while (initial != angle)
+        bool isIncreasing = angle > armAngle;
+        while (armAngle != angle)
         {
             if (isIncreasing)
             {
-                initial++;
+                armAngle++;
             }
             else
             {
-                initial--;
+                armAngle--;
             }
-            arm.write(initial);
+            arm.write(armAngle);
             delay(30);
         }
         return *this;
     }
     Servos &Servos::reset()
     {
-        setClaw(40);
+        setClaw(20);
         setArm(110);
         return *this;
     }

@@ -4,6 +4,7 @@
 #include "./motors.h"
 #include "./direction_matrix.h"
 #include "./steering.h"
+#include "./led.h"
 
 // // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
@@ -173,11 +174,76 @@ Robot &Robot::drive()
         }
         break;
     case GRAB:
+        
         servos.setArm(0);
-        // TODO: locate block and pick it up
-        // Maybe add a sub-state for grab_task being an enum of {SEARCH, APPROACH, GRAB} ?
-        // Then change deliveryTask to EXIT_ZONE
+
+        // #define MAX_RANG (520)//the max measurement value of the module is 520cm(a little bit longer than effective max range)
+        // #define ADC_SOLUTION (1023.0)//ADC accuracy of Arduino UNO is 10bit
+        // int sensityPin = A0; // select the input pin
+        // double distances[2] = {0};
+        // float crit_gradient = 5, max_gradient = 15, min_distance = 20, max_distance = 35; //TODO: tune these values
+        // int delayTime = 100; //TODO: tune this value
+        
+        // float speedCounter = 0;
+        // float gradient;
+
+        // // BLOCK DETECTION
+
+        // while (!((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance)))
+        // {
+        //     // Make the robot oscillate like a cosine wave.
+        //     if (cos(speedCounter) > 0){
+        //         wheelMotors.setSpeedsAndRun(maxSpeed/3 + 10, -maxSpeed/3);
+        //     }
+        //     else{
+        //         wheelMotors.setSpeedsAndRun(-maxSpeed/3, maxSpeed/3);
+        //     }
+            
+        //     speedCounter+= 0.5;
+
+        //     // Measure gradient of last two readings
+        //     distances[1] = distances[0];
+        //     distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+        //     gradient = abs(-distances[0]+distances[1]);
+            
+        //     Serial.print(gradient,0);Serial.print(", ");Serial.println(distances[0]);
+
+        //     delay(delayTime); //delay helps for scaling constants and reading the values for testing purposes
+        // }
+
+        // // BLOCK GRABBING
+        // float driveToBlockDistance = 2;   //TODO: tune this value
+        // wheelMotors.setSpeedsAndRun(3*maxSpeed/4, 3*maxSpeed/4);
+        // while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
+        // {
+        //     delay(10);
+        // }
+        // wheelMotors.stop();
+        // delay(1000);
+        // servos.setClaw(80);
+
+        // // BLOCK IDENTIFICATION
+        // float max_solid = 10, min_solid = 6; //TODO: tune these values
+        // LED *identificationLED;
+
+        // int reading = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
+        // Serial.print("Identification Reading: ");Serial.println(reading);
+        // if (min_solid <= reading && reading < max_solid){
+        //     identificationLED = new LED(4);
+        //     //TODO: update a boolean variable to indicate that the block is solid
+        // }
+        // else {
+        //     identificationLED = new LED(3);
+        //     //TODO: update a boolean variable to indicate that the block is foam
+        // }
+        // identificationLED->on();
+        // delay(5500); //must light up for >5s
+        // identificationLED->off();
+
+        // servos.setArm(110); // Raise arm
+        // deliveryTask = EXIT_ZONE;
         break;
+        
     case EXIT_ZONE:
         // TODO: reverse out of the zone
         // Set the current node and direction appropriately so the robot knows where it is
