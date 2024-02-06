@@ -29,7 +29,7 @@ void beginMotors()
 void handleStartButton()
 {
     startButton = new Sensors::Button(2);
-    robot->servos.reset();
+    // robot->servos.reset();
     while (!startButton->pressed())
     {
         delay(10);

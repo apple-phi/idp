@@ -72,8 +72,8 @@ Robot &Robot::drive()
 
             break;
         case LEFT_TURN:
-            wheelMotors.setSpeedsAndRun(0, maxSpeed);
-            if ((encodedLineSensorReading == 0b0010 || encodedLineSensorReading == 0b0011) && millis() - lastJunctionSeenAt > 500)
+            wheelMotors.setSpeedsAndRun(50, maxSpeed);
+            if ((encodedLineSensorReading == 0b0110 || encodedLineSensorReading == 0b0100) && millis() - lastJunctionSeenAt > 500)
             {
                 drivingMode = FOLLOW;
                 lastJunctionSeenAt = millis();
@@ -82,8 +82,8 @@ Robot &Robot::drive()
             }
             break;
         case RIGHT_TURN:
-            wheelMotors.setSpeedsAndRun(maxSpeed, 0);
-            if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 500)
+            wheelMotors.setSpeedsAndRun(maxSpeed, 50);
+            if ((encodedLineSensorReading == 0b0110 || encodedLineSensorReading == 0b0010) && millis() - lastJunctionSeenAt > 500)
             {
                 drivingMode = FOLLOW;
                 lastJunctionSeenAt = millis();

@@ -29,12 +29,12 @@ namespace Steering
 
         case 0b0001: // Very far left of line
             r.drivingMode = r.FOLLOW;
-            r.angleError = -70;
+            r.angleError = -100;
             break;
 
         case 0b1000: // Very far right of line
             r.drivingMode = r.FOLLOW;
-            r.angleError = 70;
+            r.angleError = 100;
             break;
 
         case 0b0010: // Slightly too far left of line

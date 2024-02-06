@@ -11,10 +11,10 @@ public:
     int currentDirection = Direction::N;
     int targetDirection = Direction::N;
     int latestNode = 6; // Want the robot to start at node 1
-    int targetNode = 14;
+    int targetNode = 5;
     int maxSpeed = 255;
 
-    Control::PID lineFollowPID = Control::PID(0.02, 1.1, 0);
+    Control::PID lineFollowPID = Control::PID(0.05, INT_FAST8_MAX, 0);
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;
