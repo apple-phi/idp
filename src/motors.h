@@ -1,5 +1,6 @@
 #pragma once
 #include <Adafruit_MotorShield.h>
+#include <Servo.h>
 
 namespace Motors
 {
@@ -12,5 +13,15 @@ namespace Motors
         MotorPair &setSpeed(uint8_t speed);
         MotorPair &run(uint8_t direction);
         MotorPair &stop();
+    };
+
+    struct Servos
+    {
+        Servo arm;
+        Servo claw;
+        Servos();
+        Servos &setClaw(int angle);
+        Servos &setArm(int angle);
+        Servos &reset();
     };
 }

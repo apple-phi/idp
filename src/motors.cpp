@@ -34,4 +34,25 @@ namespace Motors
         run(RELEASE);
         return *this;
     }
+    Servos::Servos()
+    {
+        arm.attach(9);
+        claw.attach(8);
+    }
+    Servos &Servos::setClaw(int angle)
+    {
+        claw.write(angle);
+        return *this;
+    }
+    Servos &Servos::setArm(int angle)
+    {
+        arm.write(angle);
+        return *this;
+    }
+    Servos &Servos::reset()
+    {
+        setClaw(0);
+        setArm(110);
+        return *this;
+    }
 }

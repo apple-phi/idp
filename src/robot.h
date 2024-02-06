@@ -9,6 +9,7 @@ class Robot
 {
 public:
     int currentDirection = Direction::N;
+    int targetDirection = Direction::N;
     int latestNode = 6; // Want the robot to start at node 1
     int targetNode = 14;
     int maxSpeed = 255;
@@ -17,6 +18,7 @@ public:
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;
+    Motors::Servos servos;
     arx::vector<pin_size_t> line_sensors;
     uint8_t encodedLineSensorReading = 0b0110;
     enum

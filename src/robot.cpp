@@ -32,9 +32,17 @@ Robot &Robot::readSensors()
 
 Robot &Robot::drive()
 {
+    
     switch (deliveryTask)
     {
     case FETCH:
+        if (latestNode == blockNodes[blockNodeIndex] && currentDirection == targetDirection)
+        {
+            deliveryTask = ENTER_ZONE;
+            return *this;
+        }
+        
+        
         if (drivingMode == FOLLOW)
         {
             Steering::assignAngleError(*this);
@@ -65,20 +73,22 @@ Robot &Robot::drive()
             break;
         case LEFT_TURN:
             wheelMotors.setSpeedsAndRun(0, maxSpeed);
-            if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 500)
-            {
-                drivingMode = FOLLOW;
-                lastJunctionSeenAt = millis();
-                lineFollowPID.reset();
-            }
-            break;
-        case RIGHT_TURN:
-            wheelMotors.setSpeedsAndRun(maxSpeed, 0);
             if ((encodedLineSensorReading == 0b0010 || encodedLineSensorReading == 0b0011) && millis() - lastJunctionSeenAt > 500)
             {
                 drivingMode = FOLLOW;
                 lastJunctionSeenAt = millis();
                 lineFollowPID.reset();
+                currentDirection = targetDirection;
+            }
+            break;
+        case RIGHT_TURN:
+            wheelMotors.setSpeedsAndRun(maxSpeed, 0);
+            if ((encodedLineSensorReading == 0b0100 || encodedLineSensorReading == 0b1100) && millis() - lastJunctionSeenAt > 500)
+            {
+                drivingMode = FOLLOW;
+                lastJunctionSeenAt = millis();
+                lineFollowPID.reset();
+                currentDirection = targetDirection;
             }
             break;
         }
@@ -89,6 +99,10 @@ Robot &Robot::drive()
         // First two blocks
         // ENTER_ZONE starts from the turn into the zone
         case 0:
+            servos.setClaw(0);
+            servos.setArm(0);
+            wheelMotors.stop();
+            delay(50000);
         case 1:
             Steering::assignAngleError(*this);
             if (angleError > 10)
@@ -145,8 +159,8 @@ Robot &Robot::drive()
 }
 
 Robot &Robot::junctionDecision()
-{
-    if (millis() - lastJunctionSeenAt < 700)
+{   
+    if (millis() - lastJunctionSeenAt < 500)
     {
         drivingMode = FOLLOW;
         return *this;
@@ -154,7 +168,7 @@ Robot &Robot::junctionDecision()
     lastJunctionSeenAt = millis();
 
     latestNode = Direction::nextNode(latestNode, currentDirection);
-    int targetDirection = Direction::nextDir(latestNode, targetNode);
+    targetDirection = Direction::nextDir(latestNode, targetNode);
 
     Serial.print("Reached: ");
     Serial.println(latestNode);
@@ -184,6 +198,5 @@ Robot &Robot::junctionDecision()
         Serial.println("Continue straight");
     }
 
-    currentDirection = targetDirection;
     return *this;
 }

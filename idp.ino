@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <Servo.h>
 #include <Adafruit_MotorShield.h>
 #include "./src/robot.h"
 #include "./src/motors.h"
@@ -30,6 +29,7 @@ void beginMotors()
 void handleStartButton()
 {
     startButton = new Sensors::Button(2);
+    robot->servos.reset();
     while (!startButton->pressed())
     {
         delay(10);
@@ -48,14 +48,10 @@ void setup()
 {
     Serial.begin(9600);
     beginMotors();
-    moveLED = new LED(3);
-    // arm.attach(9);
-    // claw.attach(8);
-    // arm.write(-20);
-    // claw.write(10);
-    // delay(500);
-    // Serial.println("Arm and claw servos attached.");
+    moveLED = new LED(5);
+
     robot = new Robot({left, right}, {13, 12, 11, 10});
+
     Direction::nav_matrix[robot->latestNode][robot->currentDirection] = 1;
     delay(500);
     handleStartButton();
