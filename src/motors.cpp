@@ -41,17 +41,46 @@ namespace Motors
     }
     Servos &Servos::setClaw(int angle)
     {
-        claw.write(angle);
+        int initial = claw.read();
+        bool isIncreasing = angle > initial;
+        while (initial != angle)
+        {
+            if (isIncreasing)
+            {
+                initial++;
+            }
+            else
+            {
+                initial--;
+            }
+            claw.write(initial);
+            delay(30);
+        }
         return *this;
     }
     Servos &Servos::setArm(int angle)
     {
-        arm.write(angle);
+        int initial = arm.read();
+        bool isIncreasing = angle > initial;
+        while (initial != angle)
+        {
+            if (isIncreasing)
+            {
+                initial++;
+            }
+            else
+            {
+                initial--;
+            }
+            arm.write(initial);
+            delay(30);
+        }
+        return *this;
         return *this;
     }
     Servos &Servos::reset()
     {
-        setClaw(0);
+        setClaw(40);
         setArm(110);
         return *this;
     }
