@@ -32,17 +32,16 @@ Robot &Robot::readSensors()
 
 Robot &Robot::drive()
 {
-    
+
     switch (deliveryTask)
     {
     case FETCH:
-        if (latestNode == blockNodes[blockNodeIndex] && currentDirection == targetDirection)
-        {
-            deliveryTask = ENTER_ZONE;
-            return *this;
-        }
-        
-        
+        // if (latestNode == blockNodes[blockNodeIndex] && currentDirection == targetDirection)
+        // {
+        //     deliveryTask = ENTER_ZONE;
+        //     return *this;
+        // }
+
         if (drivingMode == FOLLOW)
         {
             Steering::assignAngleError(*this);
@@ -56,14 +55,14 @@ Robot &Robot::drive()
             {
             case 0:
             case 1:
-                if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode))
+                if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 1)
                 {
                     deliveryTask = ENTER_ZONE;
                 }
                 break;
             case 2:
             case 3:
-                if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode))
+                if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 1)
                 {
                     deliveryTask = ENTER_ZONE;
                 }
@@ -94,23 +93,20 @@ Robot &Robot::drive()
         }
         break;
     case ENTER_ZONE:
+
         switch (blockNodeIndex)
         {
         // First two blocks
         // ENTER_ZONE starts from the turn into the zone
         case 0:
-            servos.setClaw(0);
-            servos.setArm(0);
-            wheelMotors.stop();
-            delay(50000);
         case 1:
-            Steering::assignAngleError(*this);
-            if (angleError > 10)
+            wheelMotors.setSpeedsAndRun(-maxSpeed / 2, -maxSpeed / 2);
+            readSensors();
+            if ((encodedLineSensorReading & 0b0110) == 0b0110)
             {
-                Steering::correctSteering(*this);
-                break;
+                wheelMotors.stop();
+                deliveryTask = GRAB;
             }
-            deliveryTask = GRAB;
             break;
 
         // Last two blocks
@@ -127,6 +123,7 @@ Robot &Robot::drive()
         }
         break;
     case GRAB:
+        servos.setArm(0);
         // TODO: locate block and pick it up
         // Maybe add a sub-state for grab_task being an enum of {SEARCH, APPROACH, GRAB} ?
         // Then change deliveryTask to EXIT_ZONE
@@ -159,7 +156,7 @@ Robot &Robot::drive()
 }
 
 Robot &Robot::junctionDecision()
-{   
+{
     if (millis() - lastJunctionSeenAt < 500)
     {
         drivingMode = FOLLOW;
