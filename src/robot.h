@@ -39,9 +39,11 @@ public:
     Robot &readSensors();
     Robot &drive();
     Robot &junctionDecision();
+    Robot &endTurn();
 
 private:
-    float lastJunctionSeenAt = -1;
+    float latestJunctionStartedAt = -1;
+    float latestJunctionEndedAt = -1;
     int blockNodes[4] = {5, 11, 14, 17};
     uint8_t blockNodeIndex = 0;
 };

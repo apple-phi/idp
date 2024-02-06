@@ -76,7 +76,6 @@ namespace Motors
             delay(30);
         }
         return *this;
-        return *this;
     }
     Servos &Servos::reset()
     {

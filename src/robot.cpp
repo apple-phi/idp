@@ -71,23 +71,73 @@ Robot &Robot::drive()
 
             break;
         case LEFT_TURN:
-            wheelMotors.setSpeedsAndRun(50, maxSpeed);
-            if ((encodedLineSensorReading == 0b0110 || encodedLineSensorReading == 0b0100) && millis() - lastJunctionSeenAt > 500)
+            if (Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
             {
-                drivingMode = FOLLOW;
-                lastJunctionSeenAt = millis();
-                lineFollowPID.reset();
-                currentDirection = targetDirection;
+                if (millis() - latestJunctionStartedAt > 650)
+                {
+                    wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
+                    if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 1150)
+                    {
+                        Serial.println("Special turn left complete");
+                        endTurn();
+                    }
+                }
+                else
+                {
+                    wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+                }
+            }
+            else
+            {
+                wheelMotors.setSpeedsAndRun(50, maxSpeed);
+                if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 1000)
+                {
+                    Serial.println("Standard turn left complete");
+                    Serial.print("Next node: ");
+                    Serial.println(Direction::nextNode(latestNode, targetDirection));
+                    Serial.print("(");
+                    Serial.print("(currentDirection, targetDirection): ");
+                    Serial.print(currentDirection);
+                    Serial.print(", ");
+                    Serial.print(targetDirection);
+                    Serial.println(")");
+                    endTurn();
+                }
             }
             break;
         case RIGHT_TURN:
-            wheelMotors.setSpeedsAndRun(maxSpeed, 50);
-            if ((encodedLineSensorReading == 0b0110 || encodedLineSensorReading == 0b0010) && millis() - lastJunctionSeenAt > 500)
+            if (Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
             {
-                drivingMode = FOLLOW;
-                lastJunctionSeenAt = millis();
-                lineFollowPID.reset();
-                currentDirection = targetDirection;
+                if (millis() - latestJunctionStartedAt > 650)
+                {
+                    wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
+                    if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 1150)
+                    {
+                        Serial.println("Special turn right complete");
+                        endTurn();
+                    }
+                }
+                else
+                {
+                    wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+                }
+            }
+            else
+            {
+                wheelMotors.setSpeedsAndRun(maxSpeed, 50);
+                if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 500)
+                {
+                    Serial.println("Standard turn right complete");
+                    Serial.print("Next node: ");
+                    Serial.println(Direction::nextNode(latestNode, targetDirection));
+                    Serial.print("(");
+                    Serial.print("(currentDirection, targetDirection): ");
+                    Serial.print(currentDirection);
+                    Serial.print(", ");
+                    Serial.print(targetDirection);
+                    Serial.println(")");
+                    endTurn();
+                }
             }
             break;
         }
@@ -157,12 +207,12 @@ Robot &Robot::drive()
 
 Robot &Robot::junctionDecision()
 {
-    if (millis() - lastJunctionSeenAt < 500)
+    if (millis() - latestJunctionEndedAt < 500)
     {
         drivingMode = FOLLOW;
         return *this;
     }
-    lastJunctionSeenAt = millis();
+    latestJunctionStartedAt = millis();
 
     latestNode = Direction::nextNode(latestNode, currentDirection);
     targetDirection = Direction::nextDir(latestNode, targetNode);
@@ -170,13 +220,13 @@ Robot &Robot::junctionDecision()
     Serial.print("Reached: ");
     Serial.println(latestNode);
 
-    // G: move forward a bit, probably be better to move until the sensors have left the junction
+    // // G: move forward a bit, probably be better to move until the sensors have left the junction
 
-    if (targetDirection == currentDirection)
-    {
-        drivingMode = FOLLOW;
-        return *this;
-    }
+    // if (targetDirection == currentDirection)
+    // {
+    //     drivingMode = FOLLOW;
+    //     return *this;
+    // }
 
     if (Direction::isRightTurn(currentDirection, targetDirection))
     {
@@ -186,14 +236,24 @@ Robot &Robot::junctionDecision()
     else if (Direction::isLeftTurn(currentDirection, targetDirection))
     {
         drivingMode = LEFT_TURN;
-        Serial.println("180");
+        Serial.println("Left turn");
     }
     else
     {
         drivingMode = FOLLOW;
-        targetDirection = currentDirection;
+        currentDirection = targetDirection;
+        latestJunctionEndedAt = millis();
         Serial.println("Continue straight");
     }
 
+    return *this;
+}
+
+Robot &Robot::endTurn()
+{
+    drivingMode = FOLLOW;
+    latestJunctionEndedAt = millis();
+    lineFollowPID.reset();
+    currentDirection = targetDirection;
     return *this;
 }
