@@ -25,7 +25,7 @@ public:
     int targetNode = 5;
     int maxSpeed = 255;
 
-    Control::PID lineFollowPID = Control::PID(0.02, 1.1, 0);
+    Control::PID lineFollowPID = Control::PID(0.025, 15, 0);
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;
@@ -41,16 +41,26 @@ public:
     enum
     {
         NAVIGATE,
-        ENTER_ZONE,
+        ENTER_BLOCK_ZONE,
         GRAB,
         EXIT_BLOCK_ZONE,
-        DROP_OFF
+        ENTER_DROP_ZONE,
+        DROP_OFF,
+        EXIT_DROP_ZONE
     } deliveryTask = NAVIGATE;
     Robot(Motors::MotorPair wheelMotors, arx::vector<pin_size_t> line_sensors);
     Robot &readSensors();
     Robot &drive();
     Robot &junctionDecision();
     Robot &endTurn();
+
+    void task_navigate();
+    void task_enter_block_zone();
+    void task_grab();
+    void task_exit_block_zone();
+    void task_enter_drop_zone();
+    void task_drop_off();
+    void task_exit_drop_zone();
 
 private:
     float latestJunctionStartedAt = -1;

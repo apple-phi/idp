@@ -3,6 +3,7 @@
         "Adafruit",
         "AFMS",
         "cppcheck",
-        "Motorshield"
+        "Motorshield",
+        "sensity"
     ]
 }

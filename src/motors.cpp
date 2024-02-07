@@ -87,7 +87,7 @@ namespace Motors
     }
     Servos &Servos::reset()
     {
-        setClaw(40);
+        setClaw(10);
         setArm(105);
         return *this;
     }
