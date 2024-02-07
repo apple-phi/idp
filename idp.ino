@@ -63,9 +63,17 @@ void loop()
     {
         reset();
     }
-    if (robot->wheelMotors.isMoving() && millis() % 100 <= 10)
+    if (robot->wheelMotors.isMoving())
     {
-        moveLED->toggle();
+
+        if (millis() % 100 <= 10)
+        {
+            moveLED->toggle();
+        }
+    }
+    else
+    {
+        moveLED->off();
     }
     (*robot)
         .readSensors()

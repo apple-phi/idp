@@ -225,8 +225,7 @@ Robot &Robot::drive()
             delay(10);
         }
         wheelMotors.stop();
-        delay(1000);
-        servos.setClaw(80);
+        servos.setClaw(90);
 
         // BLOCK IDENTIFICATION
         float max_solid = 10, min_solid = 6; // TODO: tune these values
