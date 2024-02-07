@@ -32,6 +32,7 @@ namespace Motors
     }
     MotorPair &MotorPair::stop()
     {
+        absLeftSpeed = absRightSpeed = 0;
         run(RELEASE);
         return *this;
     }
