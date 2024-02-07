@@ -27,10 +27,8 @@ Robot &Robot::readSensors()
     // Encode the readings in the form of 4 bits,
     // where each bit represents a sensor,
     // ordered from left to right.
-    auto readings = Sensors::digitalReadAll(line_sensors);
+    const auto readings = Sensors::digitalReadAll(line_sensors);
     encodedLineSensorReading = Sensors::encodeLineSensorReadings(readings);
-    // Serial.print("Line sensor readings: ");
-    // Helper::printVector(readings);
     return *this;
 }
 
@@ -61,14 +59,28 @@ Robot &Robot::drive()
             case 1:
                 if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
                 {
-                    deliveryTask = ENTER_ZONE;
+                    if (currentBlock == Block_t::NONE)
+                    {
+                        deliveryTask = ENTER_ZONE;
+                    }
+                    else
+                    {
+                        deliveryTask = DROP_OFF;
+                    }
                 }
                 break;
             case 2:
             case 3:
                 if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
                 {
-                    deliveryTask = ENTER_ZONE;
+                    if (currentBlock == Block_t::NONE)
+                    {
+                        deliveryTask = ENTER_ZONE;
+                    }
+                    else
+                    {
+                        deliveryTask = DROP_OFF;
+                    }
                 }
                 break;
             }
@@ -227,16 +239,24 @@ Robot &Robot::drive()
         // BLOCK GRABBING
         float driveToBlockDistance = 5; // TODO: tune this value
         latestJunctionEndedAt = millis();
-        maxSpeed = 180;
+        // maxSpeed = 150;
+        wheelMotors.setSpeedsAndRun(150, 150);
         while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
         {
-            Steering::assignAngleError(*this);
-            Steering::correctSteering(*this);
+            // Steering::assignAngleError(*this);
+            // Steering::correctSteering(*this);
+            //  Serial.print("Angle error: ");
+            //  Serial.println(angleError);
+            //  Serial.print("[left, right]: ");
+            //  Serial.print(wheelMotors.absLeftSpeed);
+            //  Serial.print(", ");
+            //  Serial.println(wheelMotors.absRightSpeed);
+
             delay(1000 * DT);
         }
         wheelMotors.stop();
-        maxSpeed = 255;
-        servos.setClaw(90);
+        // maxSpeed = 255;
+        servos.setClaw(100);
 
         // BLOCK IDENTIFICATION
         float max_solid = 10, min_solid = 6; // TODO: tune these values
@@ -245,22 +265,24 @@ Robot &Robot::drive()
         int reading = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
         Serial.print("Identification Reading: ");
         Serial.println(reading);
-        if (min_solid <= reading && reading < max_solid)
+        if (min_solid <= reading && reading < max_solid && solidBlocksCollected < 2)
         {
             identificationLED = new LED(4);
-            // TODO: update a boolean variable to indicate that the block is solid
+            currentBlock = Block_t::SOLID;
+            solidBlocksCollected++;
         }
         else
         {
             identificationLED = new LED(3);
-            // TODO: update a boolean variable to indicate that the block is foam
+            currentBlock = Block_t::FOAM;
+            foamBlocksCollected++;
         }
         identificationLED->on();
         delay(5500); // must light up for >5s
         identificationLED->off();
 
         servos.setArm(110); // Raise arm
-        // deliveryTask = NAVIGATE;
+        deliveryTask = NAVIGATE;
         // drivingMode = LEFT_TURN;
         // blockNodeIndex++;
         // targetDirection = 2;
@@ -271,7 +293,7 @@ Robot &Robot::drive()
     case EXIT_ZONE:
         // TODO: reverse out of the zone
         // Set the current node and direction appropriately so the robot knows where it is
-        // Then change deliveryTask to DELIVER
+        // Then change deliveryTask to DROP_OFF
         switch (blockNodeIndex)
         {
         case 0:
@@ -284,7 +306,7 @@ Robot &Robot::drive()
             break;
         }
         break;
-    case DELIVER:
+    case DROP_OFF:
         // TODO: change target node to the correct delivery zone
         // Then line follow and navigate to the delivery zone
         // Might need to abstract out the above NAVIGATE case so that the code can be reused.

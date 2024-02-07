@@ -44,7 +44,7 @@ public:
         ENTER_ZONE,
         GRAB,
         EXIT_ZONE,
-        DELIVER
+        DROP_OFF
     } deliveryTask = NAVIGATE;
     Robot(Motors::MotorPair wheelMotors, arx::vector<pin_size_t> line_sensors);
     Robot &readSensors();

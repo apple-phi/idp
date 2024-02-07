@@ -45,6 +45,7 @@ namespace Motors
     {
         arm.attach(9);
         claw.attach(8);
+        delay(500);
     }
     Servos &Servos::setClaw(int angle)
     {
@@ -87,7 +88,7 @@ namespace Motors
     Servos &Servos::reset()
     {
         setClaw(40);
-        setArm(110);
+        setArm(105);
         return *this;
     }
 }
