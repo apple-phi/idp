@@ -5,16 +5,27 @@
 #include "./direction_matrix.h"
 #include "./control.h"
 
+enum class Block_t
+{
+    NONE,
+    SOLID,
+    FOAM
+};
+
 class Robot
 {
 public:
+    Block_t currentBlock = Block_t::NONE;
+    uint8_t solidBlocksCollected = 0;
+    uint8_t foamBlocksCollected = 0;
+
     int currentDirection = Direction::N;
     int targetDirection = Direction::N;
     int latestNode = 6; // Want the robot to start at node 1
     int targetNode = 5;
     int maxSpeed = 255;
 
-    Control::PID lineFollowPID = Control::PID(0.04, 1E7, 0);
+    Control::PID lineFollowPID = Control::PID(0.02, 1.1, 0);
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;

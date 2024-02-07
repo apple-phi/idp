@@ -8,8 +8,8 @@
 
 Robot *robot;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *left = AFMS.getMotor(1);
-Adafruit_DCMotor *right = AFMS.getMotor(2);
+Adafruit_DCMotor *left = AFMS.getMotor(4);
+Adafruit_DCMotor *right = AFMS.getMotor(3);
 Servo arm;
 Servo claw;
 Sensors::Button *startButton;

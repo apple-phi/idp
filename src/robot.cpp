@@ -14,7 +14,7 @@ Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) :
 {
     wheelMotors
         .setSpeed(maxSpeed)
-        .run(BACKWARD)
+        .run(FORWARD)
         .stop();
     for (auto &s : line_sensors)
     {
