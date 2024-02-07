@@ -12,6 +12,7 @@
 // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
 {
+    switchButton = new Sensors::Button(7);
     wheelMotors
         .setSpeed(maxSpeed)
         .run(FORWARD)
@@ -75,10 +76,10 @@ void Robot::task_navigate()
         }
         break;
     case LEFT_TURN:
-        if (millis() - latestJunctionStartedAt > 500)
+        if (millis() - latestJunctionStartedAt > TURN_DELAY)
         {
             wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-            if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 1000)
+            if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 500 + TURN_DELAY)
             {
                 Serial.println("Special turn left complete");
                 endTurn();
@@ -90,10 +91,10 @@ void Robot::task_navigate()
         }
         break;
     case RIGHT_TURN:
-        if (millis() - latestJunctionStartedAt > 600)
+        if (millis() - latestJunctionStartedAt > TURN_DELAY)
         {
             wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-            if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 1100)
+            if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 500 + TURN_DELAY)
             {
                 Serial.println("Special turn right complete");
                 endTurn();
@@ -201,7 +202,7 @@ void Robot::task_grab()
     int reading = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
     Serial.print("Identification Reading: ");
     Serial.println(reading);
-    if (min_solid <= reading && reading < max_solid && solidBlocksCollected < 2)
+    if (!switchButton->pressed()) //(min_solid <= reading && reading < max_solid && solidBlocksCollected < 2)
     {
         identificationLED = new LED(4);
         currentBlock = Block_t::SOLID;
@@ -250,7 +251,7 @@ void Robot::task_enter_drop_zone()
     readSensors();
     Steering::assignAngleError(*this);
     Steering::correctSteering(*this);
-    if (millis() - latestJunctionStartedAt > 500)
+    if (millis() - latestJunctionEndedAt > 800 && millis() - latestJunctionStartedAt > 800)
     {
         wheelMotors.stop();
         deliveryTask = DROP_OFF;
@@ -258,6 +259,7 @@ void Robot::task_enter_drop_zone()
 }
 void Robot::task_drop_off()
 {
+    Serial.println("Dropping off");
     servos.setArm(0);
     servos.setClaw(10);
     servos.setArm(110);
@@ -272,14 +274,14 @@ void Robot::task_exit_drop_zone()
         latestNode = targetNode;
         targetNode = blockNodes[blockNodeIndex];
         targetDirection = Direction::N;
-        latestJunctionStartedAt = millis();
+        latestJunctionStartedAt = millis() - TURN_DELAY;
         if (currentBlock == Block_t::SOLID)
         {
-            drivingMode = RIGHT_TURN;
+            drivingMode = LEFT_TURN;
         }
         else
         {
-            drivingMode = LEFT_TURN;
+            drivingMode = RIGHT_TURN;
         }
         currentBlock = Block_t::NONE;
         deliveryTask = NAVIGATE;

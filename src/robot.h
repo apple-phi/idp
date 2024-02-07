@@ -4,6 +4,7 @@
 #include "./motors.h"
 #include "./direction_matrix.h"
 #include "./control.h"
+#include "./sensor.h"
 
 enum class Block_t
 {
@@ -15,6 +16,8 @@ enum class Block_t
 class Robot
 {
 public:
+    Sensors::Button *switchButton;
+
     Block_t currentBlock = Block_t::NONE;
     uint8_t solidBlocksCollected = 0;
     uint8_t foamBlocksCollected = 0;
@@ -25,7 +28,7 @@ public:
     int targetNode = 5;
     int maxSpeed = 255;
 
-    Control::PID lineFollowPID = Control::PID(0.025, 15, 0);
+    Control::PID lineFollowPID = Control::PID(0.020, 15, 0);
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;
