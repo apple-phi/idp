@@ -9,7 +9,7 @@
 #define MAX_RANG (520)        // the max measurement value of the module is 520cm(a little bit longer than effective max range)
 #define ADC_SOLUTION (1023.0) // ADC accuracy of Arduino UNO is 10bit
 
-// // cppcheck-suppress passedByValue
+// cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
 {
     wheelMotors
@@ -39,7 +39,7 @@ Robot &Robot::drive()
 
     switch (deliveryTask)
     {
-    case FETCH:
+    case NAVIGATE:
         // if (latestNode == blockNodes[blockNodeIndex] && currentDirection == targetDirection)
         // {
         //     deliveryTask = ENTER_ZONE;
@@ -59,14 +59,14 @@ Robot &Robot::drive()
             {
             case 0:
             case 1:
-                if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 1)
+                if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
                 {
                     deliveryTask = ENTER_ZONE;
                 }
                 break;
             case 2:
             case 3:
-                if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 1)
+                if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
                 {
                     deliveryTask = ENTER_ZONE;
                 }
@@ -75,12 +75,12 @@ Robot &Robot::drive()
 
             break;
         case LEFT_TURN:
-            if (Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
+            if (1 or Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
             {
-                if (millis() - latestJunctionStartedAt > 650)
+                if (millis() - latestJunctionStartedAt > 600)
                 {
                     wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-                    if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 1150)
+                    if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 1100)
                     {
                         Serial.println("Special turn left complete");
                         endTurn();
@@ -110,12 +110,12 @@ Robot &Robot::drive()
             }
             break;
         case RIGHT_TURN:
-            if (Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
+            if (1 or Direction::isNodeBeforeTarget(latestNode, targetDirection, targetNode))
             {
-                if (millis() - latestJunctionStartedAt > 650)
+                if (millis() - latestJunctionStartedAt > 600)
                 {
                     wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-                    if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 1150)
+                    if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 1100)
                     {
                         Serial.println("Special turn right complete");
                         endTurn();
@@ -155,12 +155,15 @@ Robot &Robot::drive()
         case 0:
         case 1:
             wheelMotors.setSpeedsAndRun(-maxSpeed / 2, -maxSpeed / 2);
-            readSensors();
-            if ((encodedLineSensorReading & 0b0110) == 0b0110)
-            {
-                wheelMotors.stop();
-                deliveryTask = GRAB;
-            }
+            delay(500);
+            wheelMotors.stop();
+            deliveryTask = GRAB;
+            // readSensors();
+            // if ((encodedLineSensorReading & 0b0110) == 0b0110)
+            // {
+            //     wheelMotors.stop();
+            //     deliveryTask = GRAB;
+            // }
             break;
 
         // Last two blocks
@@ -183,48 +186,56 @@ Robot &Robot::drive()
         // Then change deliveryTask to EXIT_ZONE
 
         int sensityPin = A0; // select the input pin
-        double distances[2] = {0};
-        float crit_gradient = 5, max_gradient = 15, min_distance = 20, max_distance = 35; // TODO: tune these values
-        int delayTime = 100;                                                              // TODO: tune this value
-
-        float speedCounter = 0;
-        float gradient = 0;
-
-        // BLOCK DETECTION
-
-        while (!((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance)))
+        if (blockNodeIndex == 2 || blockNodeIndex == 3)
         {
-            // Make the robot oscillate like a cosine wave.
-            if (cos(speedCounter) > 0)
+            double distances[2] = {0};
+            float crit_gradient = 5, max_gradient = 15, min_distance = 20, max_distance = 35; // TODO: tune these values
+            int delayTime = 100;                                                              // TODO: tune this value
+
+            float speedCounter = 0;
+            float gradient = 0;
+
+            // BLOCK SWEEPING
+
+            while (!((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance)))
             {
-                wheelMotors.setSpeedsAndRun(maxSpeed / 3 + 10, -maxSpeed / 3);
+                // Make the robot oscillate like a cosine wave.
+                if (cos(speedCounter) > 0)
+                {
+                    wheelMotors.setSpeedsAndRun(maxSpeed / 3 + 10, -maxSpeed / 3);
+                }
+                else
+                {
+                    wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
+                }
+
+                speedCounter += 0.5;
+
+                // Measure gradient of last two readings
+                distances[1] = distances[0];
+                distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+                gradient = abs(-distances[0] + distances[1]);
+
+                Serial.print(gradient, 0);
+                Serial.print(", ");
+                Serial.println(distances[0]);
+
+                delay(delayTime); // delay helps for scaling constants and reading the values for testing purposes
             }
-            else
-            {
-                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
-            }
-
-            speedCounter += 0.5;
-
-            // Measure gradient of last two readings
-            distances[1] = distances[0];
-            distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-            gradient = abs(-distances[0] + distances[1]);
-
-            Serial.print(gradient, 0);
-            Serial.print(", ");
-            Serial.println(distances[0]);
-
-            delay(delayTime); // delay helps for scaling constants and reading the values for testing purposes
         }
+
         // BLOCK GRABBING
-        float driveToBlockDistance = 2; // TODO: tune this value
-        wheelMotors.setSpeedsAndRun(3 * maxSpeed / 4, 3 * maxSpeed / 4);
+        float driveToBlockDistance = 5; // TODO: tune this value
+        latestJunctionEndedAt = millis();
+        maxSpeed = 180;
         while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
         {
-            delay(10);
+            Steering::assignAngleError(*this);
+            Steering::correctSteering(*this);
+            delay(1000 * DT);
         }
         wheelMotors.stop();
+        maxSpeed = 255;
         servos.setClaw(90);
 
         // BLOCK IDENTIFICATION
@@ -249,7 +260,13 @@ Robot &Robot::drive()
         identificationLED->off();
 
         servos.setArm(110); // Raise arm
-        deliveryTask = EXIT_ZONE;
+        // deliveryTask = NAVIGATE;
+        // drivingMode = LEFT_TURN;
+        // blockNodeIndex++;
+        // targetDirection = 2;
+        // latestNode = targetNode;
+        // targetNode = blockNodes[blockNodeIndex];
+
         break;
     case EXIT_ZONE:
         // TODO: reverse out of the zone
@@ -259,6 +276,7 @@ Robot &Robot::drive()
         {
         case 0:
         case 1:
+
             break;
         case 2:
             break;
@@ -269,10 +287,10 @@ Robot &Robot::drive()
     case DELIVER:
         // TODO: change target node to the correct delivery zone
         // Then line follow and navigate to the delivery zone
-        // Might need to abstract out the above FETCH case so that the code can be reused.
+        // Might need to abstract out the above NAVIGATE case so that the code can be reused.
         // Might need an extra state for DROP_OFF
         // Then increase blockNodeIndex and set the new targetNode
-        // Then change deliveryTask to FETCH
+        // Then change deliveryTask to NAVIGATE
         break;
     }
     return *this;
