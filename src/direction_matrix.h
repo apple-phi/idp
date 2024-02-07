@@ -3,6 +3,11 @@
 namespace Direction
 {
     extern int N, E, S, W;
+
+    int rightOf(int dir);
+    int leftOf(int dir);
+    int oppositeOf(int dir);
+
     bool isRightTurn(int oldDir, int newDir);
     bool isLeftTurn(int oldDir, int newDir);
     bool isStraight(int oldDir, int newDir);

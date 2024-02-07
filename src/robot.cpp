@@ -34,9 +34,36 @@ Robot &Robot::readSensors()
 
 Robot &Robot::drive()
 {
-
     switch (deliveryTask)
     {
+    case EXIT_BLOCK_ZONE:
+        Serial.println("EXIT_BLOCK_ZONE");
+        // reverse out of the zone
+        // Set the current node and direction appropriately so the robot knows where it is
+        // Then change deliveryTask to DROP_OFF
+        if (latestJunctionStartedAt + 1200 > millis())
+        {
+            Serial.println("Starting to exit block zone");
+            if (Direction::isLeftTurn(currentDirection, targetDirection))
+            {
+                Serial.println("Turning backwards to face right");
+                wheelMotors.setSpeedsAndRun(-maxSpeed, 0);
+            }
+            else
+            {
+                Serial.println("Turning backwards to face left");
+                wheelMotors.setSpeedsAndRun(0, -maxSpeed);
+            }
+        }
+        else
+        {
+            Serial.println("Exited block zone");
+            latestJunctionEndedAt = millis();
+            currentDirection = targetDirection;
+            deliveryTask = NAVIGATE;
+        }
+        break;
+
     case NAVIGATE:
         // if (latestNode == blockNodes[blockNodeIndex] && currentDirection == targetDirection)
         // {
@@ -195,7 +222,7 @@ Robot &Robot::drive()
         servos.setArm(0);
         // TODO: locate block and pick it up
         // Maybe add a sub-state for grab_task being an enum of {SEARCH, APPROACH, GRAB} ?
-        // Then change deliveryTask to EXIT_ZONE
+        // Then change deliveryTask to EXIT_BLOCK_ZONE
 
         int sensityPin = A0; // select the input pin
         if (blockNodeIndex == 2 || blockNodeIndex == 3)
@@ -238,28 +265,31 @@ Robot &Robot::drive()
 
         // BLOCK GRABBING
         float driveToBlockDistance = 5; // TODO: tune this value
+        int approachSpeed = 120;
         latestJunctionEndedAt = millis();
-        // maxSpeed = 150;
-        wheelMotors.setSpeedsAndRun(150, 150);
+        wheelMotors.setSpeedsAndRun(approachSpeed, approachSpeed);
         while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
         {
-            // Steering::assignAngleError(*this);
-            // Steering::correctSteering(*this);
-            //  Serial.print("Angle error: ");
-            //  Serial.println(angleError);
-            //  Serial.print("[left, right]: ");
-            //  Serial.print(wheelMotors.absLeftSpeed);
-            //  Serial.print(", ");
-            //  Serial.println(wheelMotors.absRightSpeed);
-
+            Steering::assignAngleError(*this);
+            if (encodedLineSensorReading == 0b0100)
+            {
+                wheelMotors.setSpeedsAndRun(approachSpeed - 10, approachSpeed);
+            }
+            else if (encodedLineSensorReading == 0b0010)
+            {
+                wheelMotors.setSpeedsAndRun(approachSpeed, approachSpeed - 10);
+            }
+            else
+            {
+                wheelMotors.setSpeedsAndRun(approachSpeed, approachSpeed);
+            }
             delay(1000 * DT);
         }
         wheelMotors.stop();
-        // maxSpeed = 255;
-        servos.setClaw(100);
 
+        servos.setClaw(100);
         // BLOCK IDENTIFICATION
-        float max_solid = 10, min_solid = 6; // TODO: tune these values
+        float max_solid = 10, min_solid = 12; // TODO: tune these values
         LED *identificationLED;
 
         int reading = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
@@ -270,43 +300,30 @@ Robot &Robot::drive()
             identificationLED = new LED(4);
             currentBlock = Block_t::SOLID;
             solidBlocksCollected++;
+            targetNode = 2;
         }
         else
         {
             identificationLED = new LED(3);
             currentBlock = Block_t::FOAM;
             foamBlocksCollected++;
+            targetNode = 0;
         }
         identificationLED->on();
         delay(5500); // must light up for >5s
         identificationLED->off();
 
         servos.setArm(110); // Raise arm
-        deliveryTask = NAVIGATE;
-        // drivingMode = LEFT_TURN;
-        // blockNodeIndex++;
-        // targetDirection = 2;
-        // latestNode = targetNode;
-        // targetNode = blockNodes[blockNodeIndex];
 
+        blockNodeIndex++;
+        targetDirection = Direction::nextDir(latestNode, targetNode);
+        latestJunctionStartedAt = millis();
+        deliveryTask = EXIT_BLOCK_ZONE;
+        Serial.println("Setting EXIT_BLOCK_ZONE");
         break;
-    case EXIT_ZONE:
-        // TODO: reverse out of the zone
-        // Set the current node and direction appropriately so the robot knows where it is
-        // Then change deliveryTask to DROP_OFF
-        switch (blockNodeIndex)
-        {
-        case 0:
-        case 1:
 
-            break;
-        case 2:
-            break;
-        case 3:
-            break;
-        }
-        break;
     case DROP_OFF:
+        wheelMotors.stop();
         // TODO: change target node to the correct delivery zone
         // Then line follow and navigate to the delivery zone
         // Might need to abstract out the above NAVIGATE case so that the code can be reused.
@@ -327,38 +344,33 @@ Robot &Robot::junctionDecision()
     }
     latestJunctionStartedAt = millis();
 
+    int prevNode = latestNode;
     latestNode = Direction::nextNode(latestNode, currentDirection);
     targetDirection = Direction::nextDir(latestNode, targetNode);
-
     Serial.print("Reached: ");
     Serial.println(latestNode);
 
-    // // G: move forward a bit, probably be better to move until the sensors have left the junction
-
-    // if (targetDirection == currentDirection)
-    // {
-    //     drivingMode = FOLLOW;
-    //     return *this;
-    // }
-
-    if (Direction::isRightTurn(currentDirection, targetDirection))
+    if (Direction::isRightTurn(currentDirection, targetDirection) ||
+        (Direction::is180(currentDirection, targetDirection) &&
+         Direction::nextNode(prevNode, Direction::rightOf(currentDirection)) >= 0))
     {
         drivingMode = RIGHT_TURN;
+        targetDirection = Direction::rightOf(currentDirection);
         Serial.println("Right turn");
     }
-    else if (Direction::isLeftTurn(currentDirection, targetDirection))
+    else if (
+        currentDirection == targetDirection)
     {
-        drivingMode = LEFT_TURN;
-        Serial.println("Left turn");
+        drivingMode = FOLLOW;
+        latestJunctionEndedAt = millis();
+        return *this;
     }
     else
     {
-        drivingMode = FOLLOW;
-        currentDirection = targetDirection;
-        latestJunctionEndedAt = millis();
-        Serial.println("Continue straight");
+        drivingMode = LEFT_TURN;
+        targetDirection = Direction::leftOf(currentDirection);
+        Serial.println("Left turn");
     }
-
     return *this;
 }
 

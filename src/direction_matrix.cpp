@@ -6,13 +6,26 @@ namespace Direction
         S = 2,
         W = 3;
 
+    int rightOf(int dir)
+    {
+        return (dir + 1) % 4;
+    }
+    int leftOf(int dir)
+    {
+        return (dir + 3) % 4;
+    }
+    int oppositeOf(int dir)
+    {
+        return (dir + 2) % 4;
+    }
+
     bool isRightTurn(int oldDir, int newDir)
     {
-        return (oldDir + 1) % 4 == newDir;
+        return rightOf(oldDir) == newDir;
     }
     bool isLeftTurn(int oldDir, int newDir)
     {
-        return (oldDir + 3) % 4 == newDir;
+        return leftOf(oldDir) == newDir;
     }
     bool isStraight(int oldDir, int newDir)
     {
@@ -20,7 +33,7 @@ namespace Direction
     }
     bool is180(int oldDir, int newDir)
     {
-        return (oldDir + 2) % 4 == newDir;
+        return oppositeOf(oldDir) == newDir;
     }
 
     int nextNode(int currNode, int dir)
