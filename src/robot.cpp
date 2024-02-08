@@ -41,39 +41,58 @@ void Robot::task_navigate()
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
         // -1 gives the node right before due to node ordering
-        switch (blockNodeIndex)
+        if (abs(angleError) < 20)
         {
-        case 0:
-        case 1:
-            if (Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
+            if ((
+                    currentBlock == Block_t::NONE &&
+                    Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode)))
             {
-                if (currentBlock == Block_t::NONE)
-                {
-                    deliveryTask = ENTER_BLOCK_ZONE;
-                }
-                else
-                {
-                    deliveryTask = ENTER_DROP_ZONE;
-                }
+                deliveryTask = ENTER_BLOCK_ZONE;
                 latestJunctionStartedAt = millis();
             }
-            break;
-        case 2:
-        case 3:
-            if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
+            else if ((millis() - latestJunctionEndedAt > 300) &&
+                     currentBlock != Block_t::NONE &&
+                     Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode))
             {
-                if (currentBlock == Block_t::NONE)
-                {
-                    deliveryTask = ENTER_BLOCK_ZONE;
-                }
-                else
-                {
-                    deliveryTask = DROP_OFF;
-                }
+                deliveryTask = ENTER_DROP_ZONE;
                 latestJunctionStartedAt = millis();
             }
-            break;
+            if (blockNodeIndex >= 2 && millis() - latestJunctionEndedAt > 800 && currentBlock == Block_t::NONE && Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode))
+            {
+                junctionDecision();
+                latestJunctionStartedAt = millis();
+            }
         }
+
+        // if (blockNodeIndex <= 1 &&
+        //     Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) &&
+        //     )
+        // {
+        //     if (currentBlock == Block_t::NONE)
+        //     {
+        //         deliveryTask = ENTER_BLOCK_ZONE;
+        //     }
+        //     else if (millis() - latestJunctionEndedAt > 800)
+        //     {
+        //         deliveryTask = ENTER_DROP_ZONE;
+        //     }
+        //     latestJunctionStartedAt = millis();
+        // }
+        // else
+        // if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
+        // {
+        //     if (currentBlock == Block_t::NONE)
+        //     {
+        //         deliveryTask = ENTER_BLOCK_ZONE;
+        //     }
+        //     else
+        //     {
+        //         deliveryTask = DROP_OFF;
+        //     }
+        //     latestJunctionStartedAt = millis();
+        // }
+        // break;
+
         break;
     case LEFT_TURN:
         if (millis() - latestJunctionStartedAt > TURN_DELAY)
@@ -181,7 +200,7 @@ void Robot::task_grab()
     }
 
     // BLOCK GRABBING
-    float driveToBlockDistance = 5; // TODO: tune this value
+    float driveToBlockDistance = 4.0; // TODO: tune this value
     maxSpeed = 120;
     latestJunctionEndedAt = millis();
     while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
@@ -193,7 +212,8 @@ void Robot::task_grab()
     }
     wheelMotors.stop();
     maxSpeed = 255;
-    servos.setClaw(80);
+    servos.setClaw(85);
+    delay(200);
 
     // BLOCK IDENTIFICATION
     float max_solid = 10, min_solid = 8; // TODO: tune these values
@@ -227,15 +247,15 @@ void Robot::task_grab()
 }
 void Robot::task_exit_block_zone()
 {
-    if (latestJunctionStartedAt + 1200 > millis())
+    if (latestJunctionStartedAt + 1000 > millis())
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed, 0);
+            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed / 4);
         }
         else
         {
-            wheelMotors.setSpeedsAndRun(0, -maxSpeed);
+            wheelMotors.setSpeedsAndRun(maxSpeed / 4, -maxSpeed);
         }
     }
     else
@@ -251,7 +271,7 @@ void Robot::task_enter_drop_zone()
     readSensors();
     Steering::assignAngleError(*this);
     Steering::correctSteering(*this);
-    if (millis() - latestJunctionEndedAt > 800 && millis() - latestJunctionStartedAt > 800)
+    if (millis() - latestJunctionEndedAt > 400 && millis() - latestJunctionStartedAt > 400)
     {
         wheelMotors.stop();
         deliveryTask = DROP_OFF;
@@ -265,26 +285,62 @@ void Robot::task_drop_off()
     servos.setArm(110);
     blockNodeIndex++;
     deliveryTask = EXIT_DROP_ZONE;
+    latestJunctionStartedAt = millis();
 }
 void Robot::task_exit_drop_zone()
 {
-
     if (blockNodeIndex < 4)
     {
-        latestNode = targetNode;
-        targetNode = blockNodes[blockNodeIndex];
-        targetDirection = Direction::N;
-        latestJunctionStartedAt = millis() - TURN_DELAY;
-        if (currentBlock == Block_t::SOLID)
+        // NOTE: New version
+        if (latestJunctionStartedAt + 1600 > millis())
         {
-            drivingMode = LEFT_TURN;
+            if (currentBlock == Block_t::SOLID)
+            {
+                latestNode = 6;
+                targetDirection = Direction::E;
+            }
+            else
+            {
+                latestNode = 4;
+                targetDirection = Direction::W;
+            }
+            if (Direction::isLeftTurn(currentDirection, targetDirection))
+            {
+                wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed / 3);
+            }
+            else
+            {
+                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, -maxSpeed);
+            }
+        }
+        else if (latestJunctionStartedAt + 2000 > millis())
+        {
+            wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
         }
         else
         {
-            drivingMode = RIGHT_TURN;
+            currentDirection = targetDirection;
+            Serial.println("Exited drop zone");
+            latestJunctionEndedAt = millis();
+            deliveryTask = NAVIGATE;
+            currentBlock = Block_t::NONE;
+            targetNode = blockNodes[blockNodeIndex];
         }
-        currentBlock = Block_t::NONE;
-        deliveryTask = NAVIGATE;
+
+        // // NOTE: Old version
+        // latestNode = targetNode;
+        // targetNode = blockNodes[blockNodeIndex];
+        // targetDirection = Direction::N;
+        // latestJunctionStartedAt = millis() - TURN_DELAY;
+        // if (currentBlock == Block_t::SOLID)
+        // {
+        //     drivingMode = LEFT_TURN;
+        // }
+        // else
+        // {
+        //     drivingMode = RIGHT_TURN;
+        // }
+        // deliveryTask = NAVIGATE;
     }
 }
 
@@ -341,8 +397,7 @@ Robot &Robot::junctionDecision()
     else if (currentDirection == targetDirection)
     {
         drivingMode = FOLLOW;
-        latestJunctionEndedAt = millis();
-        return *this;
+        latestJunctionEndedAt = millis() + 600;
     }
     else if (Direction::isLeftTurn(currentDirection, targetDirection))
     {
@@ -363,6 +418,12 @@ Robot &Robot::junctionDecision()
             drivingMode = RIGHT_TURN;
             targetDirection = Direction::rightOf(currentDirection);
             Serial.println("180 requested, doing right turn instead");
+        }
+        else
+        {
+            drivingMode = FOLLOW;
+            Serial.println("180 requested, going straight instead");
+            latestJunctionEndedAt = millis() + 600;
         }
     }
     return *this;

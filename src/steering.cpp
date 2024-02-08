@@ -18,7 +18,7 @@ namespace Steering
         case 0b0000:
         case 0b0110:
             r.drivingMode = r.FOLLOW;
-            // r.angleError = 0;
+            r.angleError = 0;
             break;
 
         // G: Weird sensor, just keep doing what it's doing

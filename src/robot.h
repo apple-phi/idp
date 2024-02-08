@@ -28,7 +28,7 @@ public:
     int targetNode = 5;
     int maxSpeed = 255;
 
-    Control::PID lineFollowPID = Control::PID(0.020, 15, 0);
+    Control::PID lineFollowPID = Control::PID(0.020, 4, 0);
     float angleError = 0; // in degrees, positive is too far right, negative is too far left
 
     Motors::MotorPair wheelMotors;
