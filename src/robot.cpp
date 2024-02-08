@@ -208,7 +208,7 @@ void Robot::task_grab()
                 wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
             }
 
-            speedCounter += 0.5;
+            speedCounter += 0.7;
 
             // Measure gradient of last two readings
             distances[1] = distances[0];
