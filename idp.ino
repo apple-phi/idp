@@ -53,6 +53,7 @@ void setup()
     robot = new Robot({left, right}, {13, 12, 11, 10});
 
     Direction::nav_matrix[robot->latestNode][robot->currentDirection] = 1;
+
     delay(500);
     handleStartButton();
 }

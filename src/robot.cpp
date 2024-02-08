@@ -9,6 +9,7 @@
 #define MAX_RANG (520)        // the max measurement value of the module is 520cm(a little bit longer than effective max range)
 #define ADC_SOLUTION (1023.0) // ADC accuracy of Arduino UNO is 10bit
 
+
 // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
 {
@@ -24,7 +25,8 @@ Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) :
 }
 
 Robot &Robot::readSensors()
-{
+{   
+    
     // Encode the readings in the form of 4 bits,
     // where each bit represents a sensor,
     // ordered from left to right.
@@ -146,6 +148,28 @@ void Robot::task_enter_block_zone()
         // TODO: You are at node 9 (or 15)
         // Go forwards a bit then turn
         // Then change deliveryTask to GRAB
+
+        latestJunctionStartedAt = millis();
+        while(millis() - latestJunctionStartedAt < 2200)
+        {
+            readSensors();
+            Steering::assignAngleError(*this);
+            Steering::correctSteering(*this);
+            delay(1000 * DT);
+        }
+        latestJunctionStartedAt = millis();
+        wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
+        while(millis() - latestJunctionStartedAt < 550)
+        {
+            delay(1000 * DT);
+        }
+        wheelMotors.stop();
+        
+        deliveryTask = GRAB;
+        latestNode = 13;
+        currentDirection = Direction::W;
+        targetDirection = Direction::S;
+
         break;
     case 3:
         // TODO: You are at node 9 (or 15)
@@ -200,10 +224,10 @@ void Robot::task_grab()
     }
 
     // BLOCK GRABBING
-    float driveToBlockDistance = 4.0; // TODO: tune this value
+    float driveToBlockDistance = 3.8; // TODO: tune this value
     maxSpeed = 120;
     latestJunctionEndedAt = millis();
-    while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance)
+    while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance && millis() - latestJunctionEndedAt < 1000)
     {
         readSensors();
         Steering::assignAngleError(*this);
