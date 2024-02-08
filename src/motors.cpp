@@ -45,10 +45,11 @@ namespace Motors
     {
         arm.attach(9);
         claw.attach(8);
-        delay(500);
+        delay(300);
     }
     Servos &Servos::setClaw(int angle)
     {
+        angle += gearError;
         int initial = claw.read();
         bool isIncreasing = angle > initial;
         while (initial != angle)
@@ -87,8 +88,33 @@ namespace Motors
     }
     Servos &Servos::reset()
     {
-        setClaw(0);
+        openClaw();
+        raiseArm();
+        return *this;
+    }
+    Servos &Servos::openClaw()
+    {
+        setClaw(0 + gearError);
+        return *this;
+    }
+    Servos &Servos::closeClaw()
+    {
+        setClaw(65 + gearError);
+        return *this;
+    }
+    Servos &Servos::raiseArm()
+    {
         setArm(105);
+        return *this;
+    }
+    Servos &Servos::lowerArm()
+    {
+        setArm(0);
+        return *this;
+    }
+    Servos &Servos::halfOpenOrHalfCloseClaw()
+    {
+        setClaw(45 + gearError);
         return *this;
     }
 }

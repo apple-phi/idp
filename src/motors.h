@@ -22,11 +22,17 @@ namespace Motors
 
     struct Servos
     {
+        int gearError = 20;
         Servo arm;
         Servo claw;
         Servos();
         Servos &setClaw(int angle);
         Servos &setArm(int angle);
         Servos &reset();
+        Servos &openClaw();
+        Servos &closeClaw();
+        Servos &halfOpenOrHalfCloseClaw();
+        Servos &raiseArm();
+        Servos &lowerArm();
     };
 }

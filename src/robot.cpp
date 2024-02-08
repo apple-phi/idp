@@ -66,40 +66,11 @@ void Robot::task_navigate()
             }
         }
 
-        // if (blockNodeIndex <= 1 &&
-        //     Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode) &&
-        //     )
-        // {
-        //     if (currentBlock == Block_t::NONE)
-        //     {
-        //         deliveryTask = ENTER_BLOCK_ZONE;
-        //     }
-        //     else if (millis() - latestJunctionEndedAt > 800)
-        //     {
-        //         deliveryTask = ENTER_DROP_ZONE;
-        //     }
-        //     latestJunctionStartedAt = millis();
-        // }
-        // else
-        // if (Direction::isNodeBeforeNodeBeforeTarget(latestNode, currentDirection, targetNode) && abs(angleError) < 20)
-        // {
-        //     if (currentBlock == Block_t::NONE)
-        //     {
-        //         deliveryTask = ENTER_BLOCK_ZONE;
-        //     }
-        //     else
-        //     {
-        //         deliveryTask = DROP_OFF;
-        //     }
-        //     latestJunctionStartedAt = millis();
-        // }
-        // break;
-
         break;
     case LEFT_TURN:
         if (millis() - latestJunctionStartedAt > TURN_DELAY)
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
+            wheelMotors.setSpeedsAndRun(-180, maxSpeed);
             if ((encodedLineSensorReading & 0b0100) == 0b0100 && millis() - latestJunctionStartedAt > 500 + TURN_DELAY)
             {
                 Serial.println("Special turn left complete");
@@ -114,7 +85,7 @@ void Robot::task_navigate()
     case RIGHT_TURN:
         if (millis() - latestJunctionStartedAt > TURN_DELAY)
         {
-            wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
+            wheelMotors.setSpeedsAndRun(maxSpeed, -180);
             if ((encodedLineSensorReading & 0b0010) == 0b0010 && millis() - latestJunctionStartedAt > 500 + TURN_DELAY)
             {
                 Serial.println("Special turn right complete");
@@ -130,10 +101,12 @@ void Robot::task_navigate()
 }
 void Robot::task_enter_block_zone()
 {
+    int blindMovingTimeBlock2 = 2000;
+    int blindMovingTimeBlock3 = 1900;
+    int blindTurningTime = 575;
+    
     switch (blockNodeIndex)
     {
-    // First two blocks
-    // ENTER_BLOCK_ZONE starts from the turn into the zone
     case 0:
     case 1:
         wheelMotors.setSpeedsAndRun(-maxSpeed / 2, -maxSpeed / 2);
@@ -142,15 +115,9 @@ void Robot::task_enter_block_zone()
         deliveryTask = GRAB;
         break;
 
-    // Last two blocks
-    // ENTER_BLOCK_ZONE starts from the node before the turn into the zone
     case 2:
-        // TODO: You are at node 9 (or 15)
-        // Go forwards a bit then turn
-        // Then change deliveryTask to GRAB
-
         latestJunctionStartedAt = millis();
-        while(millis() - latestJunctionStartedAt < 2200)
+        while(millis() - latestJunctionStartedAt < blindMovingTimeBlock2)
         {
             readSensors();
             Steering::assignAngleError(*this);
@@ -159,7 +126,7 @@ void Robot::task_enter_block_zone()
         }
         latestJunctionStartedAt = millis();
         wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-        while(millis() - latestJunctionStartedAt < 550)
+        while(millis() - latestJunctionStartedAt < blindTurningTime)
         {
             delay(1000 * DT);
         }
@@ -172,29 +139,46 @@ void Robot::task_enter_block_zone()
 
         break;
     case 3:
-        // TODO: You are at node 9 (or 15)
-        // Go forwards a bit then turn
+
+        latestJunctionStartedAt = millis();
+        while(millis() - latestJunctionStartedAt < blindMovingTimeBlock3)
+        {
+            readSensors();
+            Steering::assignAngleError(*this);
+            Steering::correctSteering(*this);
+            delay(1000 * DT);
+        }
+        latestJunctionStartedAt = millis();
+        wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
+        while(millis() - latestJunctionStartedAt < blindTurningTime)
+        {
+            delay(1000 * DT);
+        }
+        wheelMotors.stop();
+
+        deliveryTask = GRAB;
+        latestNode = 16;
+        currentDirection = Direction::S;
+        targetDirection = Direction::W;
         break;
     }
 }
 void Robot::task_grab()
 {
-    servos.setArm(0);
-    // TODO: locate block and pick it up
-    // Maybe add a sub-state for grab_task being an enum of {SEARCH, APPROACH, GRAB} ?
-    // Then change deliveryTask to EXIT_BLOCK_ZONE
+    servos.lowerArm();
 
     int sensityPin = A0; // select the input pin
     if (blockNodeIndex == 2 || blockNodeIndex == 3)
     {
         double distances[2] = {0};
-        float crit_gradient = 5, max_gradient = 15, min_distance = 20, max_distance = 35; // TODO: tune these values
-        int delayTime = 100;                                                              // TODO: tune this value
+        float crit_gradient = 4, max_gradient = 10, min_distance = 10, max_distance = 30;
+        int delayTime = 100;
 
         float speedCounter = 0;
         float gradient = 0;
 
         // BLOCK SWEEPING
+        servos.halfOpenOrHalfCloseClaw();
 
         while (!((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance)))
         {
@@ -208,7 +192,7 @@ void Robot::task_grab()
                 wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
             }
 
-            speedCounter += 0.7;
+            speedCounter += 0.5;
 
             // Measure gradient of last two readings
             distances[1] = distances[0];
@@ -219,12 +203,16 @@ void Robot::task_grab()
             Serial.print(", ");
             Serial.println(distances[0]);
 
+            if(((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance))) Serial.println("BLOCK");
+
             delay(delayTime); // delay helps for scaling constants and reading the values for testing purposes
         }
+        wheelMotors.stop();
+        servos.openClaw();
+        driveToBlockDistance = 1;
     }
-
+    
     // BLOCK GRABBING
-    float driveToBlockDistance = 3.8; // TODO: tune this value
     maxSpeed = 120;
     latestJunctionEndedAt = millis();
     while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance && millis() - latestJunctionEndedAt < 1000)
@@ -236,7 +224,21 @@ void Robot::task_grab()
     }
     wheelMotors.stop();
     maxSpeed = 255;
-    servos.setClaw(85);
+    servos.halfOpenOrHalfCloseClaw();
+    latestJunctionStartedAt = millis();
+    int speedCounter = 0;
+    while (millis() - latestJunctionStartedAt < 500)
+    {
+        if (cos(speedCounter) > 0)
+            {
+                wheelMotors.setSpeedsAndRun(maxSpeed / 3 + 10, -maxSpeed / 3);
+            }
+            else
+            {
+                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
+            }
+    }
+    servos.closeClaw();
     delay(200);
 
     // BLOCK IDENTIFICATION
@@ -263,7 +265,7 @@ void Robot::task_grab()
     identificationLED->on();
     delay(5500); // must light up for >5s
     identificationLED->off();
-    servos.setArm(110); // Raise arm
+    servos.raiseArm(); // Raise arm
 
     targetDirection = Direction::nextDir(latestNode, targetNode);
     latestJunctionStartedAt = millis();
@@ -271,15 +273,15 @@ void Robot::task_grab()
 }
 void Robot::task_exit_block_zone()
 {
-    if (latestJunctionStartedAt + 1000 > millis())
+    if (latestJunctionStartedAt + 1400 > millis())
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed / 4);
+            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed / 3);
         }
         else
         {
-            wheelMotors.setSpeedsAndRun(maxSpeed / 4, -maxSpeed);
+            wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed);
         }
     }
     else
@@ -304,9 +306,9 @@ void Robot::task_enter_drop_zone()
 void Robot::task_drop_off()
 {
     Serial.println("Dropping off");
-    servos.setArm(0);
-    servos.setClaw(10);
-    servos.setArm(110);
+    servos.lowerArm();
+    servos.openClaw();
+    servos.raiseArm();
     blockNodeIndex++;
     deliveryTask = EXIT_DROP_ZONE;
     latestJunctionStartedAt = millis();
@@ -316,7 +318,7 @@ void Robot::task_exit_drop_zone()
     if (blockNodeIndex < 4)
     {
         // NOTE: New version
-        if (latestJunctionStartedAt + 1600 > millis())
+        if (latestJunctionStartedAt + 1350 > millis())
         {
             if (currentBlock == Block_t::SOLID)
             {
@@ -330,14 +332,14 @@ void Robot::task_exit_drop_zone()
             }
             if (Direction::isLeftTurn(currentDirection, targetDirection))
             {
-                wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed / 3);
+                wheelMotors.setSpeedsAndRun(-maxSpeed, 0);
             }
             else
             {
-                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, -maxSpeed);
+                wheelMotors.setSpeedsAndRun(0, -maxSpeed);
             }
         }
-        else if (latestJunctionStartedAt + 2000 > millis())
+        else if (latestJunctionStartedAt + 1300 + 1000 > millis())
         {
             wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
         }
@@ -350,21 +352,6 @@ void Robot::task_exit_drop_zone()
             currentBlock = Block_t::NONE;
             targetNode = blockNodes[blockNodeIndex];
         }
-
-        // // NOTE: Old version
-        // latestNode = targetNode;
-        // targetNode = blockNodes[blockNodeIndex];
-        // targetDirection = Direction::N;
-        // latestJunctionStartedAt = millis() - TURN_DELAY;
-        // if (currentBlock == Block_t::SOLID)
-        // {
-        //     drivingMode = LEFT_TURN;
-        // }
-        // else
-        // {
-        //     drivingMode = RIGHT_TURN;
-        // }
-        // deliveryTask = NAVIGATE;
     }
 }
 
@@ -408,6 +395,13 @@ Robot &Robot::junctionDecision()
 
     int prevNode = latestNode;
     latestNode = Direction::nextNode(latestNode, currentDirection);
+
+    // TODO: CHANGE TEMPORARY FIX TO SKIP NODE 13.
+    if (latestNode == 13){
+        if (currentDirection == Direction::N) latestNode = 15;
+        else latestNode = 9;
+    }
+
     targetDirection = Direction::nextDir(latestNode, targetNode);
     Serial.print("Reached: ");
     Serial.println(latestNode);
