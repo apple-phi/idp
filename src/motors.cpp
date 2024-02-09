@@ -13,8 +13,8 @@ namespace Motors
     {
         left->setSpeed(abs(leftSpeed));
         right->setSpeed(abs(rightSpeed));
-        left->run(leftSpeed >= 0 ? FORWARD : BACKWARD);
-        right->run(rightSpeed >= 0 ? FORWARD : BACKWARD);
+        left->run(leftSpeed >= 0 ? Motors::forward : Motors::backward);
+        right->run(rightSpeed >= 0 ? Motors::forward : Motors::backward);
         absLeftSpeed = abs(leftSpeed);
         absRightSpeed = abs(rightSpeed);
         return *this;
@@ -88,7 +88,7 @@ namespace Motors
     }
     Servos &Servos::reset()
     {
-        openClaw();
+        halfOpenOrHalfCloseClaw();
         raiseArm();
         return *this;
     }
@@ -109,12 +109,12 @@ namespace Motors
     }
     Servos &Servos::lowerArm()
     {
-        setArm(0);
+        setArm(5);
         return *this;
     }
     Servos &Servos::halfOpenOrHalfCloseClaw()
     {
-        setClaw(45 + gearError);
+        setClaw(30 + gearError);
         return *this;
     }
 }

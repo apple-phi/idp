@@ -2,7 +2,7 @@
 #include <ArxContainer.h>
 
 #define DT 0.005       // 10ms
-#define TURN_DELAY 550 // ms
+#define TURN_DELAY 1200 // ms
 
 namespace Helper
 {

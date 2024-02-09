@@ -16,7 +16,7 @@ Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) :
     switchButton = new Sensors::Button(7);
     wheelMotors
         .setSpeed(maxSpeed)
-        .run(FORWARD)
+        .run(Motors::forward)
         .stop();
     for (auto &s : line_sensors)
     {
@@ -102,19 +102,15 @@ void Robot::task_navigate()
 void Robot::task_enter_block_zone()
 {
     int blindMovingTimeBlock2 = 2000;
-    int blindMovingTimeBlock3 = 1900;
-    int blindTurningTime = 575;
+    int blindMovingTimeBlock3 = 1880;
+    int blindTurningTime = 580;
     
     switch (blockNodeIndex)
     {
     case 0:
-    case 1:
-        wheelMotors.setSpeedsAndRun(-maxSpeed / 2, -maxSpeed / 2);
-        delay(500);
-        wheelMotors.stop();
-        deliveryTask = GRAB;
         break;
-
+    case 1:
+        break;
     case 2:
         latestJunctionStartedAt = millis();
         while(millis() - latestJunctionStartedAt < blindMovingTimeBlock2)
@@ -162,26 +158,40 @@ void Robot::task_enter_block_zone()
         targetDirection = Direction::W;
         break;
     }
+    wheelMotors.setSpeedsAndRun(-maxSpeed / 2, -maxSpeed / 2);
+    delay(500);
+    wheelMotors.stop();
+    deliveryTask = GRAB;
 }
 void Robot::task_grab()
 {
+    
+    switch(blockNodeIndex){
+        case 0:
+            servos.openClaw();
+            break;
+        case 1:
+            servos.openClaw();
+            break;
+    }
+    
     servos.lowerArm();
 
     int sensityPin = A0; // select the input pin
     if (blockNodeIndex == 2 || blockNodeIndex == 3)
     {
         double distances[2] = {0};
-        float crit_gradient = 4, max_gradient = 10, min_distance = 10, max_distance = 30;
+        float crit_gradient = 3, max_gradient = crit_gradient + 4, min_distance = 10, max_distance = 30;
         int delayTime = 100;
 
         float speedCounter = 0;
         float gradient = 0;
 
         // BLOCK SWEEPING
-        servos.halfOpenOrHalfCloseClaw();
 
-        while (!((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance)))
-        {
+        do{
+            delay(delayTime);
+
             // Make the robot oscillate like a cosine wave.
             if (cos(speedCounter) > 0)
             {
@@ -199,45 +209,41 @@ void Robot::task_grab()
             distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
             gradient = abs(-distances[0] + distances[1]);
 
-            Serial.print(gradient, 0);
-            Serial.print(", ");
-            Serial.println(distances[0]);
-
-            if(((crit_gradient < gradient and gradient < max_gradient) and (distances[1] != 0) and (min_distance < distances[0] and distances[0] < max_distance))) Serial.println("BLOCK");
-
-            delay(delayTime); // delay helps for scaling constants and reading the values for testing purposes
+            Serial.print(gradient, 0);Serial.print(", ");Serial.println(distances[0]);
         }
-        wheelMotors.stop();
-        servos.openClaw();
-        driveToBlockDistance = 1;
+        while (!((crit_gradient < gradient && gradient < max_gradient) && (distances[1] != 0) && (min_distance < distances[0] && distances[0] < max_distance)));
+        Serial.println("BLOCK");
+        driveToBlockDistance = 0.5;
     }
     
     // BLOCK GRABBING
+    wheelMotors.stop();
+    servos.openClaw();
+    delay(500);
     maxSpeed = 120;
     latestJunctionEndedAt = millis();
-    while (abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) > driveToBlockDistance && millis() - latestJunctionEndedAt < 1000)
-    {
+    float ultraSensorReading;
+    do{
+        delay(1000 * DT);
         readSensors();
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
-        delay(1000 * DT);
+        ultraSensorReading = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
     }
+    while (ultraSensorReading > driveToBlockDistance && ultraSensorReading != 0 && millis() - latestJunctionEndedAt < 1000);
     wheelMotors.stop();
     maxSpeed = 255;
     servos.halfOpenOrHalfCloseClaw();
-    latestJunctionStartedAt = millis();
-    int speedCounter = 0;
-    while (millis() - latestJunctionStartedAt < 500)
-    {
-        if (cos(speedCounter) > 0)
-            {
-                wheelMotors.setSpeedsAndRun(maxSpeed / 3 + 10, -maxSpeed / 3);
-            }
-            else
-            {
-                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
-            }
+
+    // Shake the claw to wiggle the block in case it is stuck
+    for(int i = 0; i < 10; i++){
+        wheelMotors.setSpeedsAndRun(maxSpeed / 3 + 10, -maxSpeed / 3);
+        delay(250);
+        wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
+        delay(250);
     }
+    wheelMotors.stop();
+
     servos.closeClaw();
     delay(200);
 
@@ -263,7 +269,7 @@ void Robot::task_grab()
         targetNode = 0;
     }
     identificationLED->on();
-    delay(5500); // must light up for >5s
+    delay(5100); // must light up for >5s
     identificationLED->off();
     servos.raiseArm(); // Raise arm
 
@@ -307,7 +313,7 @@ void Robot::task_drop_off()
 {
     Serial.println("Dropping off");
     servos.lowerArm();
-    servos.openClaw();
+    servos.halfOpenOrHalfCloseClaw();
     servos.raiseArm();
     blockNodeIndex++;
     deliveryTask = EXIT_DROP_ZONE;

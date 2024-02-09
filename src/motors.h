@@ -4,6 +4,12 @@
 
 namespace Motors
 {
+    enum MotorDirection
+    {
+        forward = BACKWARD,
+        backward = FORWARD,
+    };
+
     struct MotorPair
     {
         int absLeftSpeed = 0;
@@ -22,7 +28,7 @@ namespace Motors
 
     struct Servos
     {
-        int gearError = 20;
+        int gearError = 12;
         Servo arm;
         Servo claw;
         Servos();
