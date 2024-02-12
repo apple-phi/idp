@@ -25,7 +25,7 @@ public:
     int currentDirection = Direction::N;
     int targetDirection = Direction::N;
     int latestNode = 6; // Want the robot to start at node 1
-    int targetNode = 13; // Change this back to 5
+    int targetNode = 5; // Change this back to 5
     int maxSpeed = 255;
 
     Control::PID lineFollowPID = Control::PID(0.020, 4, 0);
@@ -68,7 +68,7 @@ public:
 private:
     float latestJunctionStartedAt = -1;
     float latestJunctionEndedAt = -1;
-    int blockNodes[4] = {5, 11, 13, 16};
-    uint8_t blockNodeIndex = 2; // Change this back to 0
-    float driveToBlockDistance = 3.8;
+    int blockNodes[4] = {5, 11, 16, 13};
+    uint8_t blockNodeIndex = 0; // Change this back to 0
+    float driveToBlockDistance = 1.0;
 };

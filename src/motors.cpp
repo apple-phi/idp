@@ -94,13 +94,17 @@ namespace Motors
     }
     Servos &Servos::openClaw()
     {
-        setClaw(0 + gearError);
+        setClaw(85 + gearError);
         return *this;
     }
     Servos &Servos::closeClaw()
     {
-        setClaw(65 + gearError);
+        setClaw(145 + gearError);
         return *this;
+    }
+    Servos &Servos::fullyOpenClaw()
+    {
+        setClaw(gearError+10);
     }
     Servos &Servos::raiseArm()
     {
@@ -114,7 +118,12 @@ namespace Motors
     }
     Servos &Servos::halfOpenOrHalfCloseClaw()
     {
-        setClaw(30 + gearError);
+        setClaw(115 + gearError);
+        return *this;
+    }
+    Servos &Servos::halfRaiseOrHalfLowerArm()
+    {
+        setArm(30);
         return *this;
     }
 }
