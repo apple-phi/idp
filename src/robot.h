@@ -68,7 +68,7 @@ public:
 private:
     float latestJunctionStartedAt = -1;
     float latestJunctionEndedAt = -1;
-    int blockNodes[4] = {5, 11, 16, 13};
+    int blockNodes[5] = {5, 11, 16, 13, 1};
     uint8_t blockNodeIndex = 0; // Change this back to 0
     float driveToBlockDistance = 1.0;
 };

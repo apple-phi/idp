@@ -9,7 +9,6 @@
 #define MAX_RANG (520)        // the max measurement value of the module is 520cm(a little bit longer than effective max range)
 #define ADC_SOLUTION (1023.0) // ADC accuracy of Arduino UNO is 10bit
 
-
 // cppcheck-suppress passedByValue
 Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) : wheelMotors(motors_), line_sensors(line_sensors_)
 {
@@ -25,8 +24,8 @@ Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) :
 }
 
 Robot &Robot::readSensors()
-{   
-    
+{
+
     // Encode the readings in the form of 4 bits,
     // where each bit represents a sensor,
     // ordered from left to right.
@@ -101,10 +100,10 @@ void Robot::task_navigate()
 }
 void Robot::task_enter_block_zone()
 {
-    int blindMovingTimeBlock2 = 2500;
-    int blindMovingTimeBlock3 = 2500;
+    int blindMovingTimeBlock2 = 2700;
+    int blindMovingTimeBlock3 = 3000;
     int blindTurningTime = 1000;
-    
+
     switch (blockNodeIndex)
     {
     case 0:
@@ -113,7 +112,7 @@ void Robot::task_enter_block_zone()
         break;
     case 3:
         latestJunctionStartedAt = millis();
-        while(millis() - latestJunctionStartedAt < blindMovingTimeBlock2)
+        while (millis() - latestJunctionStartedAt < blindMovingTimeBlock2)
         {
             readSensors();
             Steering::assignAngleError(*this);
@@ -122,12 +121,12 @@ void Robot::task_enter_block_zone()
         }
         latestJunctionStartedAt = millis();
         wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-        while(millis() - latestJunctionStartedAt < blindTurningTime)
+        while (millis() - latestJunctionStartedAt < blindTurningTime)
         {
             delay(1000 * DT);
         }
         wheelMotors.stop();
-        
+
         deliveryTask = GRAB;
         latestNode = 13;
         currentDirection = Direction::W;
@@ -137,7 +136,7 @@ void Robot::task_enter_block_zone()
     case 2:
 
         latestJunctionStartedAt = millis();
-        while(millis() - latestJunctionStartedAt < blindMovingTimeBlock3)
+        while (millis() - latestJunctionStartedAt < blindMovingTimeBlock3)
         {
             readSensors();
             Steering::assignAngleError(*this);
@@ -146,7 +145,7 @@ void Robot::task_enter_block_zone()
         }
         latestJunctionStartedAt = millis();
         wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-        while(millis() - latestJunctionStartedAt < blindTurningTime)
+        while (millis() - latestJunctionStartedAt < blindTurningTime)
         {
             delay(1000 * DT);
         }
@@ -159,22 +158,23 @@ void Robot::task_enter_block_zone()
         break;
     }
     wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
-    delay(800);
+    delay(600);
     wheelMotors.stop();
     deliveryTask = GRAB;
 }
 void Robot::task_grab()
 {
-    
-    switch(blockNodeIndex){
-        case 0:
-            servos.openClaw();
-            break;
-        case 1:
-            servos.openClaw();
-            break;
+
+    switch (blockNodeIndex)
+    {
+    case 0:
+        servos.openClaw();
+        break;
+    case 1:
+        servos.openClaw();
+        break;
     }
-    
+
     servos.lowerArm();
 
     int sensityPin = A0; // select the input pin
@@ -191,17 +191,18 @@ void Robot::task_grab()
 
         // BLOCK SWEEPING
 
-        do{
+        do
+        {
             delay(delayTime);
 
             // Make the robot oscillate like a cosine wave.
             if (cos(speedCounter) > 0)
             {
-                wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
+                wheelMotors.setSpeedsAndRun(maxSpeed / 2, -maxSpeed / 2);
             }
             else
             {
-                wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
+                wheelMotors.setSpeedsAndRun(-maxSpeed / 2, maxSpeed / 2);
             }
 
             speedCounter += 0.5;
@@ -209,34 +210,36 @@ void Robot::task_grab()
             // Measure gradient of last two readings
             distances[1] = distances[0];
             distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-            gradient = - distances[0] + distances[1];
+            gradient = -distances[0] + distances[1];
 
-            Serial.print(gradient, 0);Serial.print(", ");Serial.println(distances[0]);
-        }
-        while (!((crit_gradient < gradient && gradient < max_gradient) && (distances[1] != 0) && (min_distance < distances[0] && distances[0] < max_distance)));
+            Serial.print(gradient, 0);
+            Serial.print(", ");
+            Serial.println(distances[0]);
+        } while (!((crit_gradient < gradient && gradient < max_gradient) && (distances[1] != 0) && (min_distance < distances[0] && distances[0] < max_distance)));
         Serial.println("BLOCK");
         driveToBlockDistance = 0.5;
     }
-    
+
     // BLOCK GRABBING
     wheelMotors.stop();
     servos.openClaw();
     delay(500);
     latestJunctionEndedAt = millis();
     float ultraSensorReading;
-    do{
+    do
+    {
         delay(1000 * DT);
         readSensors();
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
         ultraSensorReading = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-    }
-    while (ultraSensorReading > driveToBlockDistance && ultraSensorReading != 0 && millis() - latestJunctionEndedAt < 1000);
+    } while (ultraSensorReading > driveToBlockDistance && ultraSensorReading != 0 && millis() - latestJunctionEndedAt < 1000);
     wheelMotors.stop();
     servos.halfOpenOrHalfCloseClaw();
 
     // Shake the claw to wiggle the block in case it is stuck
-    for(int i = 0; i < 2; i++){
+    for (int i = 0; i < 2; i++)
+    {
         wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
         delay(500);
         wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
@@ -244,14 +247,13 @@ void Robot::task_grab()
     }
 
     latestJunctionEndedAt = millis();
-    do{
+    do
+    {
         delay(1000 * DT);
         readSensors();
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
-    }
-    while (millis() - latestJunctionEndedAt < 100);
-
+    } while (millis() - latestJunctionEndedAt < 200);
 
     wheelMotors.stop();
 
@@ -285,15 +287,15 @@ void Robot::task_grab()
 }
 void Robot::task_exit_block_zone()
 {
-    if (latestJunctionStartedAt + 2000 > millis())
+    if (latestJunctionStartedAt + 1800 > millis())
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed/3);
+            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed / 3);
         }
         else
         {
-            wheelMotors.setSpeedsAndRun(maxSpeed/3, -maxSpeed);
+            wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed);
         }
     }
     else
@@ -328,7 +330,7 @@ void Robot::task_drop_off()
 }
 void Robot::task_exit_drop_zone()
 {
-    if (blockNodeIndex < 4)
+    // if (blockNodeIndex < 4)
     {
         // NOTE: New version
         if (latestJunctionStartedAt + 2000 > millis())
@@ -410,9 +412,12 @@ Robot &Robot::junctionDecision()
     latestNode = Direction::nextNode(latestNode, currentDirection);
 
     // Fix to skip ghost node 13
-    if (latestNode == 13){
-        if (currentDirection == Direction::N) latestNode = 15;
-        else latestNode = 9;
+    if (latestNode == 13)
+    {
+        if (currentDirection == Direction::N)
+            latestNode = 15;
+        else
+            latestNode = 9;
     }
 
     targetDirection = Direction::nextDir(latestNode, targetNode);
@@ -422,7 +427,7 @@ Robot &Robot::junctionDecision()
     if (currentDirection == targetDirection)
     {
         drivingMode = FOLLOW;
-        latestJunctionEndedAt = millis() + 1000;
+        latestJunctionEndedAt = millis() + 1500;
     }
     else if (Direction::isRightTurn(currentDirection, targetDirection))
     {
