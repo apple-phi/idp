@@ -21,6 +21,7 @@ Robot::Robot(Motors::MotorPair motors_, arx::vector<pin_size_t> line_sensors_) :
     {
         pinMode(s, INPUT);
     }
+    moveLED = new LED(5);
 }
 
 Robot &Robot::readSensors()
@@ -117,14 +118,11 @@ void Robot::task_enter_block_zone()
             readSensors();
             Steering::assignAngleError(*this);
             Steering::correctSteering(*this);
-            delay(1000 * DT);
+            delayAndBlinkIfMoving(1000 * DT); // delay(1000 * DT);
         }
-        latestJunctionStartedAt = millis();
+
         wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-        while (millis() - latestJunctionStartedAt < blindTurningTime)
-        {
-            delay(1000 * DT);
-        }
+        delayAndBlinkIfMoving(blindTurningTime);
         wheelMotors.stop();
 
         deliveryTask = GRAB;
@@ -141,14 +139,11 @@ void Robot::task_enter_block_zone()
             readSensors();
             Steering::assignAngleError(*this);
             Steering::correctSteering(*this);
-            delay(1000 * DT);
+            delayAndBlinkIfMoving(1000 * DT); // delay(1000 * DT);
         }
-        latestJunctionStartedAt = millis();
+
         wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-        while (millis() - latestJunctionStartedAt < blindTurningTime)
-        {
-            delay(1000 * DT);
-        }
+        delayAndBlinkIfMoving(blindTurningTime);
         wheelMotors.stop();
 
         deliveryTask = GRAB;
@@ -160,7 +155,8 @@ void Robot::task_enter_block_zone()
     if (blockNodeIndex != 3)
     {
         wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
-        delay(600);
+        latestJunctionStartedAt = millis();
+        delayAndBlinkIfMoving(600);
         wheelMotors.stop();
     }
 
@@ -196,12 +192,12 @@ void Robot::task_grab()
 
         // BLOCK SWEEPING
         wheelMotors.setSpeedsAndRun(turnSpeed, -turnSpeed);
-        delay((3.14159 / counterIncrement - 1) * delayTime);
+        delayAndBlinkIfMoving((3.14159 / counterIncrement - 1) * delayTime);
         wheelMotors.stop();
 
         do
         {
-            delay(delayTime);
+            delayAndBlinkIfMoving(delayTime); // delay(delayTime);
 
             // Make the robot oscillate like a cosine wave.
             if (sin(speedCounter) > 0)
@@ -234,13 +230,13 @@ void Robot::task_grab()
     wheelMotors.stop();
     servos.lowerArm();
     servos.openClaw();
-    delay(500);
+    delayAndBlinkIfMoving(100);
     latestJunctionEndedAt = millis();
     double distances[2] = {0};
     distances[0] = driveToBlockDistance;
     do
     {
-        delay(1000 * DT);
+        delayAndBlinkIfMoving(1000 * DT); // delay(1000 * DT);
         readSensors();
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
@@ -252,18 +248,18 @@ void Robot::task_grab()
     servos.halfOpenOrHalfCloseClaw();
 
     // Shake the claw to wiggle the block in case it is stuck
-    for (int i = 0; i < 2; i++)
-    {
-        wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
-        delay(500);
-        wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
-        delay(500);
-    }
+    wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
+    delayAndBlinkIfMoving(500);
+    wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
+    delayAndBlinkIfMoving(1000);
+    wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
+    delayAndBlinkIfMoving(500);
+    wheelMotors.stop();
 
     latestJunctionEndedAt = millis();
     do
     {
-        delay(1000 * DT);
+        delayAndBlinkIfMoving(1000 * DT); // delay(1000 * DT);
         readSensors();
         Steering::assignAngleError(*this);
         Steering::correctSteering(*this);
@@ -272,7 +268,7 @@ void Robot::task_grab()
     wheelMotors.stop();
 
     servos.closeClaw();
-    delay(200);
+    delayAndBlinkIfMoving(200);
 
     // BLOCK IDENTIFICATION
     LED *identificationLED;
@@ -504,4 +500,27 @@ Robot &Robot::endTurn()
     lineFollowPID.reset();
     currentDirection = targetDirection;
     return *this;
+}
+
+void Robot::delayAndBlinkIfMoving(int delayTime)
+{
+    for (int i = 0; i < delayTime; i += DT * 1000)
+    {
+        if (wheelMotors.isMoving())
+        {
+            if (millis() % 500 < 250)
+            {
+                moveLED->on();
+            }
+            else
+            {
+                moveLED->off();
+            }
+        }
+        else
+        {
+            moveLED->off();
+        }
+        delay(DT * 1000);
+    }
 }

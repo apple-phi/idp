@@ -1,7 +1,8 @@
 #pragma once
 #include <ArxContainer.h>
+#include "./robot.h"
 
-#define DT 0.005       // 10ms
+#define DT 0.005        // 10ms
 #define TURN_DELAY 1050 // ms
 
 namespace Helper

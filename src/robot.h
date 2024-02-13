@@ -5,6 +5,8 @@
 #include "./direction_matrix.h"
 #include "./control.h"
 #include "./sensor.h"
+#include "./led.h"
+
 
 enum class Block_t
 {
@@ -16,6 +18,8 @@ enum class Block_t
 class Robot
 {
 public:
+    LED *moveLED;
+
     Sensors::Button *switchButton;
 
     Block_t currentBlock = Block_t::NONE;
@@ -57,6 +61,8 @@ public:
     Robot &drive();
     Robot &junctionDecision();
     Robot &endTurn();
+    void delayAndBlinkIfMoving(int delayTime);
+    
 
     void task_navigate();
     void task_enter_block_zone();
