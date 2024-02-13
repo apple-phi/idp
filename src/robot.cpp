@@ -157,7 +157,8 @@ void Robot::task_enter_block_zone()
         targetDirection = Direction::W;
         break;
     }
-    if (blockNodeIndex != 3){
+    if (blockNodeIndex != 3)
+    {
         wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
         delay(600);
         wheelMotors.stop();
@@ -178,8 +179,6 @@ void Robot::task_grab()
         break;
     }
 
-    
-
     int sensityPin = A0; // select the input pin
     if (blockNodeIndex == 2 || blockNodeIndex == 3)
     {
@@ -197,9 +196,8 @@ void Robot::task_grab()
 
         // BLOCK SWEEPING
         wheelMotors.setSpeedsAndRun(turnSpeed, -turnSpeed);
-        delay((3.14159 / counterIncrement - 1) * delayTime );
+        delay((3.14159 / counterIncrement - 1) * delayTime);
         wheelMotors.stop();
-
 
         do
         {
@@ -220,13 +218,13 @@ void Robot::task_grab()
             // Measure gradient of last two readings
             distances[1] = distances[0];
             distances[0] = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-            gradient = - distances[0] + distances[1];
+            gradient = -distances[0] + distances[1];
 
             Serial.print(gradient, 0);
             Serial.print(", ");
             Serial.println(distances[0]);
-        } 
-        //while (1);
+        }
+        // while (1);
         while (!((crit_gradient < gradient && gradient < max_gradient) && (distances[1] != 0) && (min_distance < distances[0] && distances[0] < max_distance)));
         Serial.println("BLOCK");
         // driveToBlockDistance = 0.5;
@@ -307,11 +305,11 @@ void Robot::task_exit_block_zone()
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed/4);
+            wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed / 4);
         }
         else
         {
-            wheelMotors.setSpeedsAndRun(-maxSpeed/4, -maxSpeed);
+            wheelMotors.setSpeedsAndRun(-maxSpeed / 4, -maxSpeed);
         }
     }
     else
@@ -346,7 +344,7 @@ void Robot::task_drop_off()
 }
 void Robot::task_exit_drop_zone()
 {
-    // if (blockNodeIndex < 4)
+    if (blockNodeIndex < 4)
     {
         // NOTE: New version
         if (latestJunctionStartedAt + 2000 > millis())
@@ -379,10 +377,28 @@ void Robot::task_exit_drop_zone()
             currentDirection = targetDirection;
             Serial.println("Exited drop zone");
             latestJunctionEndedAt = millis();
-            deliveryTask = NAVIGATE;
             currentBlock = Block_t::NONE;
-            targetNode = blockNodes[blockNodeIndex];
         }
+    }
+    else
+    {
+        deliveryTask = NAVIGATE;
+        targetNode = 1;
+        if (currentBlock == Block_t::SOLID)
+        {
+            latestNode = 6;
+            wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
+            currentDirection = targetDirection = Direction::W;
+        }
+        else
+        {
+            latestNode = 4;
+            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
+            currentDirection = targetDirection = Direction::E;
+        }
+        delay(1000);
+        latestJunctionEndedAt = millis();
+        currentBlock = Block_t::NONE;
     }
 }
 
