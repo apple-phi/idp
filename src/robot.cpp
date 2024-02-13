@@ -554,4 +554,5 @@ void Robot::delayAndBlinkIfMoving(int delayTime)
         }
         delay(DT * 1000);
     }
+    moveLED->off();
 }
