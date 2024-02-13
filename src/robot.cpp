@@ -110,8 +110,8 @@ void Robot::task_navigate()
 }
 void Robot::task_enter_block_zone()
 {
-    int blindMovingTimeBlock2 = 2650;
-    int blindMovingTimeBlock3 = 3150;
+    int blindMovingTimeBlock2 = 2700;
+    int blindMovingTimeBlock3 = 3125;
     int blindTurningTime = 1000;
 
     switch (blockNodeIndex)
@@ -306,9 +306,15 @@ void Robot::task_grab()
 
     switch (blockNodeIndex)
     {
+    case 0:
+        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+        delayAndBlinkIfMoving(200);
+        wheelMotors.stop();
+        break;
+    
     case 1:
         wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
-        delayAndBlinkIfMoving(400);
+        delayAndBlinkIfMoving(450);
         wheelMotors.stop();
         break;
     case 2:
@@ -554,5 +560,8 @@ void Robot::delayAndBlinkIfMoving(int delayTime)
         }
         delay(DT * 1000);
     }
-    moveLED->off();
+    if (delayTime != 1000 * DT)
+    {
+        moveLED->off();
+    }
 }
