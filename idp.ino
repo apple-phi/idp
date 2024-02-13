@@ -13,7 +13,6 @@ Adafruit_DCMotor *right = AFMS.getMotor(3);
 Servo arm;
 Servo claw;
 Sensors::Button *startButton;
-LED *moveLED;
 
 void beginMotors()
 {
@@ -48,7 +47,7 @@ void setup()
 {
     Serial.begin(9600);
     beginMotors();
-    moveLED = new LED(5);
+    
 
     robot = new Robot({left, right}, {13, 12, 11, 10});
 
@@ -64,20 +63,8 @@ void loop()
     {
         reset();
     }
-    if (robot->wheelMotors.isMoving())
-    {
-
-        if (millis() % 100 <= 10)
-        {
-            moveLED->toggle();
-        }
-    }
-    else
-    {
-        moveLED->off();
-    }
     (*robot)
         .readSensors()
-        .drive();
-    delay(1000 * DT);
+        .drive()
+        .delayAndBlinkIfMoving(1000 * DT);
 }
