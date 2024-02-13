@@ -63,7 +63,7 @@ namespace Motors
                 initial--;
             }
             claw.write(initial);
-            delay(30);
+            delay(15);
         }
         return *this;
     }
@@ -82,7 +82,7 @@ namespace Motors
                 initial--;
             }
             arm.write(initial);
-            delay(30);
+            delay(15);
         }
         return *this;
     }
@@ -104,7 +104,7 @@ namespace Motors
     }
     Servos &Servos::fullyOpenClaw()
     {
-        setClaw(gearError+10);
+        setClaw(gearError + 10);
     }
     Servos &Servos::raiseArm()
     {
@@ -123,7 +123,7 @@ namespace Motors
     }
     Servos &Servos::halfOpenOrHalfCloseClaw()
     {
-        setClaw(115 + gearError);
+        setClaw(125 + gearError);
         return *this;
     }
     Servos &Servos::halfRaiseOrHalfLowerArm()

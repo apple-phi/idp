@@ -45,14 +45,14 @@ void Robot::task_navigate()
         // -1 gives the node right before due to node ordering
         if (abs(angleError) < 20)
         {
-            if ((
-                    currentBlock == Block_t::NONE &&
-                    Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode)))
+            if ((!goHome &&
+                 currentBlock == Block_t::NONE &&
+                 Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode)))
             {
                 deliveryTask = ENTER_BLOCK_ZONE;
                 latestJunctionStartedAt = millis();
             }
-            else if ((millis() - latestJunctionEndedAt > 300) &&
+            else if (!goHome && (millis() - latestJunctionEndedAt > 300) &&
                      currentBlock != Block_t::NONE &&
                      Direction::isNodeBeforeTarget(latestNode, currentDirection, targetNode))
             {
@@ -67,8 +67,9 @@ void Robot::task_navigate()
             if (goHome && latestNode == 1)
             {
                 wheelMotors.setSpeed(maxSpeed);
-                delayAndBlinkIfMoving(1000);
+                delayAndBlinkIfMoving(2000);
                 wheelMotors.stop();
+                asm volatile("jmp 0");
                 while (1)
                     ;
             }
@@ -110,7 +111,7 @@ void Robot::task_navigate()
 void Robot::task_enter_block_zone()
 {
     int blindMovingTimeBlock2 = 2650;
-    int blindMovingTimeBlock3 = 3100;
+    int blindMovingTimeBlock3 = 3150;
     int blindTurningTime = 1000;
 
     switch (blockNodeIndex)
@@ -191,7 +192,7 @@ void Robot::task_grab()
         double distances[2] = {0};
         float crit_gradient = 3, max_gradient = crit_gradient + 100, min_distance = 0, max_distance = 30;
         int delayTime = 50;
-        float counterIncrement = 0.25;
+        float counterIncrement = 0.3;
         int turnSpeed = 175;
 
         float speedCounter = 0;
@@ -256,11 +257,11 @@ void Robot::task_grab()
 
     // Shake the claw to wiggle the block in case it is stuck
     wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
-    delayAndBlinkIfMoving(500);
+    delayAndBlinkIfMoving(200);
     wheelMotors.setSpeedsAndRun(-maxSpeed / 3, maxSpeed / 3);
-    delayAndBlinkIfMoving(1000);
+    delayAndBlinkIfMoving(400);
     wheelMotors.setSpeedsAndRun(maxSpeed / 3, -maxSpeed / 3);
-    delayAndBlinkIfMoving(500);
+    delayAndBlinkIfMoving(200);
     wheelMotors.stop();
 
     latestJunctionEndedAt = millis();
@@ -275,7 +276,10 @@ void Robot::task_grab()
     wheelMotors.stop();
 
     servos.closeClaw();
-    delayAndBlinkIfMoving(200);
+    delayAndBlinkIfMoving(100);
+    wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
+    delayAndBlinkIfMoving(100);
+    wheelMotors.stop();
 
     // BLOCK IDENTIFICATION
     LED *identificationLED;
@@ -300,11 +304,23 @@ void Robot::task_grab()
 
     targetDirection = Direction::nextDir(latestNode, targetNode);
 
-    if (blockNodeIndex == 3)
+    switch (blockNodeIndex)
     {
-        wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
-        delayAndBlinkIfMoving(600);
+    case 1:
+        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+        delayAndBlinkIfMoving(400);
         wheelMotors.stop();
+        break;
+    case 2:
+        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+        delayAndBlinkIfMoving(400);
+        wheelMotors.stop();
+        break;
+    case 3:
+        wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
+        delayAndBlinkIfMoving(550);
+        wheelMotors.stop();
+        break;
     }
 
     latestJunctionStartedAt = millis();
@@ -312,7 +328,7 @@ void Robot::task_grab()
 }
 void Robot::task_exit_block_zone()
 {
-    if (latestJunctionStartedAt + 2200 > millis())
+    if (latestJunctionStartedAt + 2400 > millis())
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
@@ -385,10 +401,12 @@ void Robot::task_exit_drop_zone()
         }
         else
         {
+            deliveryTask = NAVIGATE;
             currentDirection = targetDirection;
             Serial.println("Exited drop zone");
             latestJunctionEndedAt = millis();
             currentBlock = Block_t::NONE;
+            targetNode = blockNodes[blockNodeIndex];
         }
     }
     else

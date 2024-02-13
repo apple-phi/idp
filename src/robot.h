@@ -25,12 +25,12 @@ public:
     Block_t currentBlock = Block_t::NONE;
     uint8_t solidBlocksCollected = 0;
     uint8_t foamBlocksCollected = 0;
-    uint8_t blockNodeIndex = 3; // Change this back to 0
+    uint8_t blockNodeIndex = 0; // Change this back to 0
 
     int currentDirection = Direction::N;
     int targetDirection = Direction::N;
-    int latestNode = 6;  // Want the robot to start at node 1
-    int targetNode = 13; // Change this back to 5
+    int latestNode = 6; // Want the robot to start at node 1
+    int targetNode = 5; // Change this back to 5
     int maxSpeed = 255;
 
     Control::PID lineFollowPID = Control::PID(0.020, 4, 0);
