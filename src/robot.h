@@ -7,7 +7,6 @@
 #include "./sensor.h"
 #include "./led.h"
 
-
 enum class Block_t
 {
     NONE,
@@ -18,6 +17,7 @@ enum class Block_t
 class Robot
 {
 public:
+    bool goHome = false;
     LED *moveLED;
 
     Sensors::Button *switchButton;
@@ -62,7 +62,6 @@ public:
     Robot &junctionDecision();
     Robot &endTurn();
     void delayAndBlinkIfMoving(int delayTime);
-    
 
     void task_navigate();
     void task_enter_block_zone();

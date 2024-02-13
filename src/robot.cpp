@@ -64,6 +64,14 @@ void Robot::task_navigate()
                 junctionDecision();
                 latestJunctionStartedAt = millis();
             }
+            if (goHome && latestNode == 1)
+            {
+                wheelMotors.setSpeed(maxSpeed);
+                delayAndBlinkIfMoving(1000);
+                wheelMotors.stop();
+                while (1)
+                    ;
+            }
         }
 
         break;
@@ -297,7 +305,7 @@ void Robot::task_grab()
 }
 void Robot::task_exit_block_zone()
 {
-    if (latestJunctionStartedAt + 1800 > millis())
+    if (latestJunctionStartedAt + 2200 > millis())
     {
         if (Direction::isLeftTurn(currentDirection, targetDirection))
         {
@@ -384,17 +392,18 @@ void Robot::task_exit_drop_zone()
         {
             latestNode = 6;
             wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-            currentDirection = targetDirection = Direction::W;
+            currentDirection = targetDirection = Direction::E;
         }
         else
         {
             latestNode = 4;
             wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-            currentDirection = targetDirection = Direction::E;
+            currentDirection = targetDirection = Direction::W;
         }
-        delay(1000);
+        delay(1100);
         latestJunctionEndedAt = millis();
         currentBlock = Block_t::NONE;
+        goHome = true;
     }
 }
 
