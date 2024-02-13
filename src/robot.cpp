@@ -163,7 +163,6 @@ void Robot::task_enter_block_zone()
     if (blockNodeIndex != 3)
     {
         wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
-        latestJunctionStartedAt = millis();
         delayAndBlinkIfMoving(600);
         wheelMotors.stop();
     }
@@ -300,6 +299,14 @@ void Robot::task_grab()
     servos.raiseArm(); // Raise arm
 
     targetDirection = Direction::nextDir(latestNode, targetNode);
+
+    if (blockNodeIndex == 3)
+    {
+        wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
+        delayAndBlinkIfMoving(600);
+        wheelMotors.stop();
+    }
+
     latestJunctionStartedAt = millis();
     deliveryTask = EXIT_BLOCK_ZONE;
 }
@@ -388,20 +395,17 @@ void Robot::task_exit_drop_zone()
     {
         deliveryTask = NAVIGATE;
         targetNode = 1;
+        wheelMotors.setSpeedsAndRun(-maxSpeed, -maxSpeed);
+        delayAndBlinkIfMoving(2700);
+        currentDirection = targetDirection = Direction::S;
         if (currentBlock == Block_t::SOLID)
         {
-            latestNode = 6;
-            wheelMotors.setSpeedsAndRun(maxSpeed, -maxSpeed);
-            currentDirection = targetDirection = Direction::E;
+            latestNode = 12;
         }
         else
         {
-            latestNode = 4;
-            wheelMotors.setSpeedsAndRun(-maxSpeed, maxSpeed);
-            currentDirection = targetDirection = Direction::W;
+            latestNode = 8;
         }
-        delay(1100);
-        latestJunctionEndedAt = millis();
         currentBlock = Block_t::NONE;
         goHome = true;
     }
