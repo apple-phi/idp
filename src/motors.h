@@ -28,7 +28,7 @@ namespace Motors
 
     struct Servos
     {
-        int gearError = 7;
+        int gearError = 10; //Add 3 everytime gear slips
         Servo arm;
         Servo claw;
         Servos();
@@ -42,5 +42,6 @@ namespace Motors
         Servos &lowerArm();
         Servos &fullyOpenClaw();
         Servos &halfRaiseOrHalfLowerArm();
+        Servos &fullyLowerArm();
     };
 }

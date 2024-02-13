@@ -113,7 +113,12 @@ namespace Motors
     }
     Servos &Servos::lowerArm()
     {
-        setArm(5);
+        setArm(6);
+        return *this;
+    }
+    Servos &Servos::fullyLowerArm()
+    {
+        setArm(4);
         return *this;
     }
     Servos &Servos::halfOpenOrHalfCloseClaw()
@@ -123,7 +128,7 @@ namespace Motors
     }
     Servos &Servos::halfRaiseOrHalfLowerArm()
     {
-        setArm(30);
+        setArm(20);
         return *this;
     }
 }

@@ -28,7 +28,7 @@ void beginMotors()
 
 void handleStartButton()
 {
-    startButton = new Sensors::Button(2);
+    startButton = new Sensors::Button(7);
     robot->servos.reset();
     while (!startButton->pressed())
     {
