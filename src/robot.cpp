@@ -110,8 +110,8 @@ void Robot::task_navigate()
 }
 void Robot::task_enter_block_zone()
 {
-    int blindMovingTimeBlock2 = 2700;
-    int blindMovingTimeBlock3 = 3125;
+    int blindMovingTimeBlock2 = 2675;
+    int blindMovingTimeBlock3 = 3250;
     int blindTurningTime = 1000;
 
     switch (blockNodeIndex)
@@ -167,6 +167,12 @@ void Robot::task_enter_block_zone()
         delayAndBlinkIfMoving(600);
         wheelMotors.stop();
     }
+    if (blockNodeIndex == 2)
+    {
+        wheelMotors.setSpeedsAndRun(maxSpeed, maxSpeed);
+        delayAndBlinkIfMoving(75);
+        wheelMotors.stop();
+    }
 
     deliveryTask = GRAB;
 }
@@ -190,9 +196,9 @@ void Robot::task_grab()
         servos.fullyLowerArm();
 
         double distances[2] = {0};
-        float crit_gradient = 3, max_gradient = crit_gradient + 100, min_distance = 0, max_distance = 30;
+        float crit_gradient = 4, max_gradient = crit_gradient + 100, min_distance = 0, max_distance = 30;
         int delayTime = 50;
-        float counterIncrement = 0.3;
+        float counterIncrement = 0.35;
         int turnSpeed = 175;
 
         float speedCounter = 0;

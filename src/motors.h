@@ -28,7 +28,7 @@ namespace Motors
 
     struct Servos
     {
-        int gearError = 60; // Add 3 everytime gear slips
+        int gearError = 2; // Add 3 everytime gear slips
         Servo arm;
         Servo claw;
         Servos();
