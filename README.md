@@ -10,3 +10,7 @@
 - Also, the C++ standard library is not available, so we have to use libraries specifically compatible with Arduino.
 - The `.vscode/` folder has been included with some settings that may be useful for development under VSCode.
 Any files that are machine-specific have been excluded from the repository using `.gitignore`.
+
+# Video of Robot Running
+
+[![IDP 2024 Competition Robot](https://img.youtube.com/vi/qrxxvx1YnWg/0.jpg)](https://www.youtube.com/watch?v=qrxxvx1YnWg "IDP 2024 Competition Robot")
