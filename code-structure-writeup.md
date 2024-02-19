@@ -1,6 +1,6 @@
 # Code structure write-up
 
-An explanation of the code structure, as required by the assignment. In general, the principles which guided the code structure were:
+Full code available at https://github.com/apple-phi/idp. An explanation of the code structure, as required by the assignment. In general, the principles which guided the code structure were:
 
 - **Encapsulation**: The project uses classes to encapsulate related data and functions. For example, the Robot class in `src/robot.h` encapsulates robot-related data and operations.
 - **Modularity**: The code is divided into object-oriented classes and methods, each of which has a single responsibility.
